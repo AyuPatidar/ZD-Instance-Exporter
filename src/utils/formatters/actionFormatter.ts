@@ -29,5 +29,5 @@ export function formatAction(action: ZendeskAction, lookups?: ZendeskLookups): s
 
 export function formatActionList(actions?: ZendeskAction[], lookups?: ZendeskLookups): string {
   if (!actions || actions.length === 0) return '';
-  return actions.map(a => formatAction(a, lookups)).join('\n');
+  return actions.map((a, idx) => `${idx + 1}. ${formatAction(a, lookups)}`).join('\n');
 }

@@ -155,7 +155,9 @@ export async function getOrganizations(onProgress?: (count: number) => void): Pr
   const rawList = await fetchAllPages<ZendeskOrganizationRaw>('/api/v2/organizations.json?page[size]=100', 'organizations', onProgress);
 
   return rawList.map(raw => {
-    const domainNames = Array.isArray(raw.domain_names) ? raw.domain_names.join('\n') : '';
+    const domainNames = Array.isArray(raw.domain_names)
+      ? raw.domain_names.map((d, idx) => `${idx + 1}. ${d}`).join('\n')
+      : '';
     const tags = Array.isArray(raw.tags) ? raw.tags.join(', ') : '';
 
     let groupStr = '';
@@ -168,7 +170,7 @@ export async function getOrganizations(onProgress?: (count: number) => void): Pr
     if (raw.organization_fields && typeof raw.organization_fields === 'object') {
       customFieldsStr = Object.entries(raw.organization_fields)
         .filter(([_, v]) => v !== null && v !== undefined && v !== '')
-        .map(([k, v]) => `${k}: ${v}`)
+        .map(([k, v], idx) => `${idx + 1}. ${k}: ${v}`)
         .join('\n');
     }
 
@@ -239,7 +241,7 @@ export async function getAgents(onProgress?: (count: number) => void): Promise<R
     if (raw.user_fields && typeof raw.user_fields === 'object') {
       userFieldsStr = Object.entries(raw.user_fields)
         .filter(([_, v]) => v !== null && v !== undefined && v !== '')
-        .map(([k, v]) => `${k}: ${v}`)
+        .map(([k, v], idx) => `${idx + 1}. ${k}: ${v}`)
         .join('\n');
     }
 
@@ -457,9 +459,10 @@ export async function getForms(onProgress?: (count: number) => void): Promise<Re
   return rawList.map(raw => {
     const fieldsStr = Array.isArray(raw.ticket_field_ids)
       ? raw.ticket_field_ids
-          .map(fid => {
+          .map((fid, idx) => {
             const field = lookups.ticketFields.get(fid);
-            return field ? `${field.title} (${fid})` : `Field ${fid}`;
+            const fieldTitle = field ? `${field.title} (${fid})` : `Field ${fid}`;
+            return `${idx + 1}. ${fieldTitle}`;
           })
           .join('\n')
       : '';

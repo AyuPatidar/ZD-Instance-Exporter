@@ -37,5 +37,5 @@ export function formatSLAMetric(item: ZendeskSLAMetric): string {
 
 export function formatSLAMetricsList(metrics?: ZendeskSLAMetric[]): string {
   if (!metrics || !Array.isArray(metrics) || metrics.length === 0) return '';
-  return metrics.map(formatSLAMetric).join('\n');
+  return metrics.map((m, idx) => `${idx + 1}. ${formatSLAMetric(m)}`).join('\n');
 }

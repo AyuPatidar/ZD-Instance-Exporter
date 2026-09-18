@@ -44,8 +44,8 @@ describe('Condition Formatter', () => {
     };
 
     const result = formatConditions(conditions);
-    expect(result.all).toBe('Status | Is | new\nPriority | Greater Than | normal');
-    expect(result.any).toBe('Tags | Includes | vip');
+    expect(result.all).toBe('1. Status | Is | new\n2. Priority | Greater Than | normal');
+    expect(result.any).toBe('1. Tags | Includes | vip');
   });
 });
 
@@ -76,7 +76,7 @@ describe('Action Formatter', () => {
       { field: 'remove_tags', value: 'pending_review' },
     ];
     const list = formatActionList(actions);
-    expect(list).toBe('Status → solved\nRemove Tags → pending_review');
+    expect(list).toBe('1. Status → solved\n2. Remove Tags → pending_review');
   });
 });
 
@@ -131,8 +131,8 @@ describe('SLA Metrics Formatter', () => {
       { priority: 'urgent', metric: 'first_reply_time', target: 30, business_hours: false },
       { priority: 'high', metric: 'next_reply_time', target: 60, business_hours: true },
     ]);
-    expect(list).toContain('Priority: Urgent');
-    expect(list).toContain('\nPriority: High');
+    expect(list).toContain('1. Priority: Urgent');
+    expect(list).toContain('2. Priority: High');
   });
 });
 
@@ -145,7 +145,7 @@ describe('Custom Field Options Formatter', () => {
     ];
     const formatted = formatCustomFieldOptions(options);
     expect(formatted).toBe(
-      'Alfa Romeo → alfa_romeo\nAston Martin → aston_martin [Default]\nBMW → bmw'
+      '1. Alfa Romeo → alfa_romeo\n2. Aston Martin → aston_martin [Default]\n3. BMW → bmw'
     );
   });
 });

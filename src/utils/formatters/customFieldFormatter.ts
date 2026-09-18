@@ -6,9 +6,9 @@ export function formatCustomFieldOptions(options?: ZendeskCustomFieldOption[]): 
   }
 
   return options
-    .map(opt => {
+    .map((opt, idx) => {
       const defaultTag = opt.default ? ' [Default]' : '';
-      return `${opt.name} → ${opt.value}${defaultTag}`;
+      return `${idx + 1}. ${opt.name} → ${opt.value}${defaultTag}`;
     })
     .join('\n');
 }

@@ -54,7 +54,9 @@ export function formatScheduleIntervals(intervals?: ZendeskWorkWeekInterval[]): 
   }
 
   const formatDay = (list: string[]): string => {
-    return list.length > 0 ? list.join('\n') : 'Closed';
+    if (list.length === 0) return 'Closed';
+    if (list.length === 1) return list[0];
+    return list.map((item, idx) => `${idx + 1}. ${item}`).join('\n');
   };
 
   return {

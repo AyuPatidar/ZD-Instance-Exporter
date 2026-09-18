@@ -16,7 +16,7 @@ export function formatCondition(cond: ZendeskCondition, lookups?: ZendeskLookups
 
 export function formatConditionList(conditions?: ZendeskCondition[], lookups?: ZendeskLookups): string {
   if (!conditions || conditions.length === 0) return '';
-  return conditions.map(c => formatCondition(c, lookups)).join('\n');
+  return conditions.map((c, idx) => `${idx + 1}. ${formatCondition(c, lookups)}`).join('\n');
 }
 
 export function formatConditions(conditions?: ZendeskConditions, lookups?: ZendeskLookups): { all: string; any: string } {
