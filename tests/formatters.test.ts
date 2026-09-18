@@ -32,6 +32,69 @@ describe('Condition Formatter', () => {
     expect(formatted).toBe('Group | Is Not | Tier 2 Support (12345)');
   });
 
+  test('formats unassigned group and assignee cleanly without empty values', () => {
+    const formattedGroup = formatCondition({
+      field: 'group_id',
+      operator: 'is_not',
+      value: '',
+    });
+    expect(formattedGroup).toBe('Group | Is Not | (unassigned)');
+
+    const formattedAssignee = formatCondition({
+      field: 'assignee_id',
+      operator: 'is',
+      value: null,
+    });
+    expect(formattedAssignee).toBe('Assignee | Is | (unassigned)');
+  });
+
+  test('formats unary operators without trailing pipe or empty values', () => {
+    const groupChanged = formatCondition({
+      field: 'group_id',
+      operator: 'changed',
+      value: '',
+    });
+    expect(groupChanged).toBe('Group | Changed');
+
+    const assigneeChanged = formatCondition({
+      field: 'assignee_id',
+      operator: 'changed',
+      value: '',
+    });
+    expect(assigneeChanged).toBe('Assignee | Changed');
+
+    const tagsPresent = formatCondition({
+      field: 'current_tags',
+      operator: 'present',
+    });
+    expect(tagsPresent).toBe('Tags | Is Present');
+  });
+
+  test('formats custom roles and standard roles accurately', () => {
+    const lookups = createEmptyLookups();
+    lookups.customRoles.set(25176440012818, 'Tier 2 Specialist');
+
+    const withLookup = formatCondition(
+      { field: 'role', operator: 'is_not', value: 25176440012818 },
+      lookups
+    );
+    expect(withLookup).toBe('Role | Is Not | Tier 2 Specialist (25176440012818)');
+
+    const withoutLookup = formatCondition({
+      field: 'role',
+      operator: 'is_not',
+      value: 25176440012818,
+    });
+    expect(withoutLookup).toBe('Role | Is Not | Custom Role (25176440012818)');
+
+    const standardRole = formatCondition({
+      field: 'role',
+      operator: 'is',
+      value: '2',
+    });
+    expect(standardRole).toBe('Role | Is | Agent');
+  });
+
   test('formats All and Any condition blocks separated by newlines', () => {
     const conditions = {
       all: [

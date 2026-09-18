@@ -569,3 +569,15 @@ export const mockBrands = {
     }
   ]
 };
+
+export const mockCustomRoles = {
+  custom_roles: [
+    {
+      id: 25176440012818,
+      name: "Tier 2 Specialist",
+      description: "Escalation handling team member",
+      role_type: 0
+    }
+  ]
+};
+

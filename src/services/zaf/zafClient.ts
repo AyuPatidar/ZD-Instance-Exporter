@@ -14,6 +14,7 @@ import {
   mockSLAs,
   mockGroupSLAs,
   mockBrands,
+  mockCustomRoles,
 } from './mockData';
 
 class MockZAFClient implements ZAFClientInstance {
@@ -99,6 +100,9 @@ class MockZAFClient implements ZAFClientInstance {
     }
     if (url.includes('/api/v2/brands')) {
       return mockBrands as unknown as T;
+    }
+    if (url.includes('/api/v2/custom_roles')) {
+      return mockCustomRoles as unknown as T;
     }
 
     console.warn(`[MockZAFClient] Unhandled URL: ${url}`);

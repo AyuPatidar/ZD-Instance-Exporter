@@ -1,5 +1,6 @@
 import { ZendeskLookups, createEmptyLookups, TicketFieldLookup } from '../../types/lookups';
 import { fetchAllPages } from './pagination';
+import { zendeskRequest } from './zendeskRequest';
 import { ZendeskGroupRaw, ZendeskAgentRaw, ZendeskOrganizationRaw, ZendeskTicketFieldRaw, ZendeskTicketFormRaw } from '../../types/resources';
 
 let cachedLookups: ZendeskLookups | null = null;
@@ -87,6 +88,58 @@ export async function getZendeskLookups(forceRefresh = false): Promise<ZendeskLo
       }
     } catch (err) {
       console.warn('[Lookups] Failed to fetch brands for cross-referencing:', err);
+    }
+
+    // 7. Fetch Custom Roles (Enterprise accounts)
+    try {
+      const customRolesRes = await fetchAllPages<any>('/api/v2/custom_roles.json', 'custom_roles');
+      for (const role of customRolesRes) {
+        if (role && role.id && role.name) {
+          lookups.customRoles.set(role.id, role.name);
+          lookups.customRoles.set(Number(role.id), role.name);
+          lookups.customRoles.set(String(role.id), role.name);
+        }
+      }
+    } catch (err) {
+      try {
+        const directRes = await zendeskRequest<any>({ url: '/api/v2/custom_roles.json', type: 'GET' });
+        const list = directRes?.custom_roles || [];
+        for (const role of list) {
+          if (role && role.id && role.name) {
+            lookups.customRoles.set(role.id, role.name);
+            lookups.customRoles.set(Number(role.id), role.name);
+            lookups.customRoles.set(String(role.id), role.name);
+          }
+        }
+      } catch (innerErr) {
+        console.warn('[Lookups] Custom roles not available or restricted on this plan:', innerErr);
+      }
+    }
+
+    // 8. Fetch Business Hours Schedules
+    try {
+      const schedulesRes = await fetchAllPages<any>('/api/v2/business_hours/schedules.json', 'schedules');
+      for (const sched of schedulesRes) {
+        if (sched && sched.id && sched.name) {
+          lookups.schedules.set(sched.id, sched.name);
+          lookups.schedules.set(Number(sched.id), sched.name);
+          lookups.schedules.set(String(sched.id), sched.name);
+        }
+      }
+    } catch (err) {
+      try {
+        const directSched = await zendeskRequest<any>({ url: '/api/v2/business_hours/schedules.json', type: 'GET' });
+        const list = directSched?.schedules || [];
+        for (const sched of list) {
+          if (sched && sched.id && sched.name) {
+            lookups.schedules.set(sched.id, sched.name);
+            lookups.schedules.set(Number(sched.id), sched.name);
+            lookups.schedules.set(String(sched.id), sched.name);
+          }
+        }
+      } catch (innerErr) {
+        console.warn('[Lookups] Failed to fetch schedules for cross-referencing:', innerErr);
+      }
     }
 
     cachedLookups = lookups;

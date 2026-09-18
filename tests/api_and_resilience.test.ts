@@ -123,6 +123,13 @@ describe('Cross-Reference Lookups Cache', () => {
     const lookups3 = await getZendeskLookups();
     expect(lookups3.groups.size).toBeGreaterThan(0);
   });
+
+  test('loads custom roles into lookup cache supporting both number and string keys', async () => {
+    invalidateLookupCache();
+    const lookups = await getZendeskLookups();
+    expect(lookups.customRoles.get(25176440012818)).toBe('Tier 2 Specialist');
+    expect(lookups.customRoles.get('25176440012818')).toBe('Tier 2 Specialist');
+  });
 });
 
 describe('Partial Failure Resilience', () => {

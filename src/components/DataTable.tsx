@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { ResourceItem } from '../types/resources';
 import {
   Search,
+  X,
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
@@ -140,14 +141,26 @@ export const DataTable: React.FC<DataTableProps> = ({
         <div className="flex items-center space-x-2.5 flex-1 max-w-md justify-end">
           {/* Search Box */}
           <div className="relative flex-1 max-w-xs">
-            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none">
+              <Search className="w-3.5 h-3.5 text-gray-400" />
+            </div>
             <input
               type="text"
               value={searchTerm}
               onChange={handleSearchChange}
               placeholder={`Search ${title.toLowerCase()}...`}
-              className="w-full pl-8.5 pr-3 py-1.5 text-xs bg-gray-50 border border-gray-300 rounded-md focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+              className="w-full pl-9 pr-9 py-1.5 text-xs bg-gray-50 border border-gray-300 rounded-md focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
             />
+            {searchTerm && (
+              <button
+                type="button"
+                onClick={() => setSearchTerm('')}
+                className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-gray-400 hover:text-gray-600 focus:outline-none"
+                title="Clear search"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
 
           {/* Refresh Button */}

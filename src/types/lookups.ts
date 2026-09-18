@@ -12,6 +12,8 @@ export interface ZendeskLookups {
   ticketFields: Map<number, TicketFieldLookup>;
   forms: Map<number, string>;
   brands: Map<number, string>;
+  customRoles: Map<number | string, string>;
+  schedules: Map<number | string, string>;
 }
 
 export function createEmptyLookups(): ZendeskLookups {
@@ -22,5 +24,7 @@ export function createEmptyLookups(): ZendeskLookups {
     ticketFields: new Map(),
     forms: new Map(),
     brands: new Map(),
+    customRoles: new Map<number | string, string>(),
+    schedules: new Map<number | string, string>(),
   };
 }
