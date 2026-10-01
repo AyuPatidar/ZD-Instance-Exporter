@@ -18,7 +18,7 @@ import { getZendeskLookups, invalidateLookupCache } from '../src/services/api/lo
 import { buildWorkbook, TabExportData } from '../src/services/export/xlsxExporter';
 
 describe('Zendesk Configuration Services (All 13 Resources)', () => {
-  test('retrieves and transforms Triggers preserving raw and formatted rows', async () => {
+  test('retrieves and transforms Triggers preserving raw and formatted rows with categories and URL', async () => {
     const items = await getTriggers();
     expect(items.length).toBeGreaterThan(0);
     const first = items[0];
@@ -26,87 +26,102 @@ describe('Zendesk Configuration Services (All 13 Resources)', () => {
     expect(first.exportRow.ID).toBe(first.raw.id);
     expect(typeof first.exportRow.Active).toBe('boolean');
     expect(typeof first.exportRow.Position).toBe('number');
+    expect(first.exportRow['Category Name']).toBe('Notifications');
+    expect(first.exportRow['Category Position']).toBe(1);
     expect(first.exportRow['All Conditions']).toBeDefined();
     expect(first.exportRow.Actions).toBeDefined();
+    expect(first.exportRow.URL).toContain('/admin/objects-rules/rules/triggers/');
   });
 
-  test('retrieves and transforms Automations', async () => {
+  test('retrieves and transforms Automations with direct URL', async () => {
     const items = await getAutomations();
     expect(items.length).toBeGreaterThan(0);
     expect(items[0].exportRow.Title).toBeDefined();
     expect(typeof items[0].exportRow.Position).toBe('number');
+    expect(items[0].exportRow.URL).toContain('/admin/objects-rules/rules/automations/');
   });
 
-  test('retrieves and transforms Views with execution columns resolved', async () => {
+  test('retrieves and transforms Views with execution columns resolved and direct URL', async () => {
     const items = await getViews();
     expect(items.length).toBeGreaterThan(0);
     expect(items[0].exportRow.Columns).toBeDefined();
     expect(items[0].exportRow['Group By']).toBeDefined();
+    expect(items[0].exportRow.URL).toContain('/admin/workspaces/agent-workspace/views/');
   });
 
-  test('retrieves and transforms Organizations resolving domain names and custom fields', async () => {
+  test('retrieves and transforms Organizations resolving domain names, custom fields and direct URL', async () => {
     const items = await getOrganizations();
     expect(items.length).toBeGreaterThan(0);
     expect(items[0].exportRow['Domain Names']).toBeDefined();
+    expect(items[0].exportRow.URL).toContain('/agent/organizations/');
   });
 
-  test('retrieves and transforms Agents filtering for team members', async () => {
+  test('retrieves and transforms Agents filtering for team members and direct URL', async () => {
     const items = await getAgents();
     expect(items.length).toBeGreaterThan(0);
     expect(items[0].exportRow.Email).toBeDefined();
     expect(['admin', 'agent']).toContain(items[0].exportRow.Role);
+    expect(items[0].exportRow.URL).toContain('/agent/users/');
   });
 
-  test('retrieves and transforms Groups', async () => {
+  test('retrieves and transforms Groups with direct URL', async () => {
     const items = await getGroups();
     expect(items.length).toBeGreaterThan(0);
     expect(items[0].exportRow.Name).toBeDefined();
+    expect(items[0].exportRow.URL).toContain('/admin/people/team/groups/');
   });
 
-  test('retrieves and transforms Macros', async () => {
+  test('retrieves and transforms Macros with direct URL', async () => {
     const items = await getMacros();
     expect(items.length).toBeGreaterThan(0);
     expect(items[0].exportRow.Actions).toBeDefined();
+    expect(items[0].exportRow.URL).toContain('/admin/objects-rules/rules/macros/');
   });
 
-  test('retrieves and transforms Custom Ticket Fields with options formatting', async () => {
+  test('retrieves and transforms Custom Ticket Fields with options formatting and direct URL', async () => {
     const items = await getCustomFields();
     expect(items.length).toBeGreaterThan(0);
     const taggerField = items.find(f => f.raw.type === 'tagger');
     expect(taggerField).toBeDefined();
     expect(taggerField!.exportRow['Custom Field Options']).toContain('→');
+    expect(items[0].exportRow.URL).toContain('/admin/objects-rules/tickets/ticket-fields/');
   });
 
-  test('retrieves and transforms Business Hours into weekday interval schedules', async () => {
+  test('retrieves and transforms Business Hours into weekday interval schedules with direct URL', async () => {
     const items = await getBusinessHours();
     expect(items.length).toBeGreaterThan(0);
     const schedule = items[0].exportRow;
     expect(schedule['Time Zone']).toBeDefined();
     expect(schedule.Monday).toContain(':');
+    expect(schedule.URL).toContain('/admin/objects-rules/rules/schedules/');
   });
 
-  test('retrieves and transforms Support Addresses', async () => {
+  test('retrieves and transforms Support Addresses with direct URL', async () => {
     const items = await getSupportAddresses();
     expect(items.length).toBeGreaterThan(0);
     expect(items[0].exportRow.Email).toBeDefined();
+    expect(items[0].exportRow.URL).toContain('/admin/channels/talk-and-email/email/addresses/');
   });
 
-  test('retrieves and transforms Ticket Forms resolving ticket field IDs', async () => {
+  test('retrieves and transforms Ticket Forms resolving ticket field IDs with direct URL', async () => {
     const items = await getForms();
     expect(items.length).toBeGreaterThan(0);
     expect(items[0].exportRow['Ticket Field IDs']).toBeDefined();
+    expect(items[0].exportRow.URL).toContain('/admin/objects-rules/tickets/ticket-forms/');
   });
 
-  test('retrieves and transforms SLA Policies formatting metrics', async () => {
+  test('retrieves and transforms SLA Policies formatting metrics with direct URL', async () => {
     const items = await getSLAs();
     expect(items.length).toBeGreaterThan(0);
     expect(items[0].exportRow.Metrics).toContain('Priority:');
+    expect(items[0].exportRow.URL).toContain('/admin/objects-rules/rules/slas/');
   });
 
-  test('retrieves and transforms Group SLA Policies', async () => {
+  test('retrieves and transforms Group SLA Policies with direct URL', async () => {
     const items = await getGroupSLAs();
     expect(items.length).toBeGreaterThan(0);
     expect(items[0].exportRow['Policy Metrics']).toContain('Priority:');
+    expect(items[0].exportRow.URL).toContain('/admin/objects-rules/rules/group-slas/');
   });
 });
 

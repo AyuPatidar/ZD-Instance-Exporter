@@ -15,6 +15,7 @@ import {
   mockGroupSLAs,
   mockBrands,
   mockCustomRoles,
+  mockTriggerCategories,
 } from './mockData';
 
 class MockZAFClient implements ZAFClientInstance {
@@ -59,6 +60,9 @@ class MockZAFClient implements ZAFClientInstance {
     // Simulate brief network latency for realistic feel
     await new Promise(resolve => setTimeout(resolve, 80));
 
+    if (url.includes('/api/v2/trigger_categories')) {
+      return mockTriggerCategories as unknown as T;
+    }
     if (url.includes('/api/v2/triggers')) {
       return mockTriggers as unknown as T;
     }

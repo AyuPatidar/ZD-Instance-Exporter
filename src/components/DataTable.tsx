@@ -15,6 +15,7 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
+  ExternalLink,
 } from 'lucide-react';
 
 interface DataTableProps<TRaw = any, TExport = any> {
@@ -411,6 +412,21 @@ function renderCellContent(colName: string, value: any): React.ReactNode {
       >
         {isAct ? 'Active' : 'Inactive'}
       </span>
+    );
+  }
+
+  if (colName === 'URL' && typeof value === 'string' && value.startsWith('http')) {
+    return (
+      <a
+        href={value}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex items-center space-x-1 text-blue-600 hover:text-blue-800 hover:underline text-xs font-mono group max-w-[260px]"
+        title={value}
+      >
+        <span className="truncate">{value}</span>
+        <ExternalLink className="w-3 h-3 flex-shrink-0 text-blue-500 opacity-70 group-hover:opacity-100" />
+      </a>
     );
   }
 

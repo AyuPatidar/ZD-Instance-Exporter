@@ -28,6 +28,7 @@ import {
   SLAPolicyExportRow,
   ZendeskGroupSLAPolicyRaw,
   GroupSLAPolicyExportRow,
+  ConfigTabKey,
 } from '../../types/resources';
 import { formatConditions } from '../../utils/formatters/conditionFormatter';
 import { formatActionList } from '../../utils/formatters/actionFormatter';
@@ -35,6 +36,40 @@ import { formatScheduleIntervals } from '../../utils/formatters/scheduleFormatte
 import { formatSLAMetricsList } from '../../utils/formatters/slaFormatter';
 import { formatCustomFieldOptions } from '../../utils/formatters/customFieldFormatter';
 import { formatDateUTC } from '../../utils/formatters/dateFormatter';
+
+export function getDirectUrl(subdomain: string, type: ConfigTabKey, id: number | string): string {
+  const host = subdomain ? `${subdomain}.zendesk.com` : 'support.zendesk.com';
+  switch (type) {
+    case 'triggers':
+      return `https://${host}/admin/objects-rules/rules/triggers/${id}`;
+    case 'automations':
+      return `https://${host}/admin/objects-rules/rules/automations/${id}`;
+    case 'views':
+      return `https://${host}/admin/workspaces/agent-workspace/views/${id}`;
+    case 'organizations':
+      return `https://${host}/agent/organizations/${id}`;
+    case 'agents':
+      return `https://${host}/agent/users/${id}`;
+    case 'groups':
+      return `https://${host}/admin/people/team/groups/${id}`;
+    case 'macros':
+      return `https://${host}/admin/objects-rules/rules/macros/${id}`;
+    case 'custom_fields':
+      return `https://${host}/admin/objects-rules/tickets/ticket-fields/${id}`;
+    case 'business_hours':
+      return `https://${host}/admin/objects-rules/rules/schedules/${id}`;
+    case 'support_addresses':
+      return `https://${host}/admin/channels/talk-and-email/email/addresses/${id}`;
+    case 'forms':
+      return `https://${host}/admin/objects-rules/tickets/ticket-forms/${id}`;
+    case 'slas':
+      return `https://${host}/admin/objects-rules/rules/slas/${id}`;
+    case 'group_slas':
+      return `https://${host}/admin/objects-rules/rules/group-slas/${id}`;
+    default:
+      return `https://${host}`;
+  }
+}
 
 // 1. Triggers
 export async function getTriggers(onProgress?: (count: number) => void): Promise<ResourceItem<ZendeskTriggerRaw, TriggerExportRow>[]> {
@@ -45,14 +80,30 @@ export async function getTriggers(onProgress?: (count: number) => void): Promise
     const { all, any } = formatConditions(raw.conditions, lookups);
     const actions = formatActionList(raw.actions, lookups);
 
+    let categoryName = '';
+    let categoryPosition: number | string = '';
+    if (raw.category_id && lookups.triggerCategories) {
+      const cat =
+        lookups.triggerCategories.get(raw.category_id) ||
+        lookups.triggerCategories.get(String(raw.category_id)) ||
+        lookups.triggerCategories.get(Number(raw.category_id));
+      if (cat) {
+        categoryName = cat.name;
+        categoryPosition = cat.position;
+      }
+    }
+
     const exportRow: TriggerExportRow = {
       ID: raw.id,
       Title: raw.title || '',
       Active: Boolean(raw.active),
+      'Category Name': categoryName,
+      'Category Position': categoryPosition,
       Position: Number(raw.position ?? 0),
       'All Conditions': all,
       'Any Conditions': any,
       Actions: actions,
+      URL: getDirectUrl(lookups.subdomain, 'triggers', raw.id),
       'Created At': formatDateUTC(raw.created_at),
       'Updated At': formatDateUTC(raw.updated_at),
     };
@@ -82,6 +133,7 @@ export async function getAutomations(onProgress?: (count: number) => void): Prom
       'All Conditions': all,
       'Any Conditions': any,
       Actions: actions,
+      URL: getDirectUrl(lookups.subdomain, 'automations', raw.id),
       'Created At': formatDateUTC(raw.created_at),
       'Updated At': formatDateUTC(raw.updated_at),
     };
@@ -137,6 +189,7 @@ export async function getViews(onProgress?: (count: number) => void): Promise<Re
       'Group Order': raw.execution?.group_order || '',
       'Sort By': raw.execution?.sort_by || '',
       'Sort Order': raw.execution?.sort_order || '',
+      URL: getDirectUrl(lookups.subdomain, 'views', raw.id),
       'Created At': formatDateUTC(raw.created_at),
       'Updated At': formatDateUTC(raw.updated_at),
     };
@@ -186,6 +239,7 @@ export async function getOrganizations(onProgress?: (count: number) => void): Pr
       'Shared Tickets': Boolean(raw.shared_tickets),
       Tags: tags,
       'Custom Fields': customFieldsStr,
+      URL: getDirectUrl(lookups.subdomain, 'organizations', raw.id),
       'Created At': formatDateUTC(raw.created_at),
       'Updated At': formatDateUTC(raw.updated_at),
     };
@@ -266,6 +320,7 @@ export async function getAgents(onProgress?: (count: number) => void): Promise<R
       'Agent Brand IDs': brandIdsStr,
       Tags: tags,
       'User Fields': userFieldsStr,
+      URL: getDirectUrl(lookups.subdomain, 'agents', raw.id),
       'Created At': formatDateUTC(raw.created_at),
       'Updated At': formatDateUTC(raw.updated_at),
       'Last Login At': formatDateUTC(raw.last_login_at),
@@ -282,6 +337,7 @@ export async function getAgents(onProgress?: (count: number) => void): Promise<R
 
 // 6. Groups
 export async function getGroups(onProgress?: (count: number) => void): Promise<ResourceItem<ZendeskGroupRaw, GroupExportRow>[]> {
+  const lookups = await getZendeskLookups();
   const rawList = await fetchAllPages<ZendeskGroupRaw>('/api/v2/groups.json?page[size]=100', 'groups', onProgress);
 
   return rawList.map(raw => {
@@ -293,6 +349,7 @@ export async function getGroups(onProgress?: (count: number) => void): Promise<R
       Public: Boolean(raw.is_public),
       Deleted: Boolean(raw.deleted),
       'Agent Count': raw.agent_count !== undefined && raw.agent_count !== null ? raw.agent_count : '',
+      URL: getDirectUrl(lookups.subdomain, 'groups', raw.id),
       'Created At': formatDateUTC(raw.created_at),
       'Updated At': formatDateUTC(raw.updated_at),
     };
@@ -331,6 +388,7 @@ export async function getMacros(onProgress?: (count: number) => void): Promise<R
       Default: Boolean(raw.default),
       Actions: actions,
       Restriction: restrictionStr,
+      URL: getDirectUrl(lookups.subdomain, 'macros', raw.id),
       'Created At': formatDateUTC(raw.created_at),
       'Updated At': formatDateUTC(raw.updated_at),
     };
@@ -345,6 +403,7 @@ export async function getMacros(onProgress?: (count: number) => void): Promise<R
 
 // 8. Custom Fields (Ticket Fields)
 export async function getCustomFields(onProgress?: (count: number) => void): Promise<ResourceItem<ZendeskTicketFieldRaw, CustomFieldExportRow>[]> {
+  const lookups = await getZendeskLookups();
   const rawList = await fetchAllPages<ZendeskTicketFieldRaw>('/api/v2/ticket_fields.json?page[size]=100', 'ticket_fields', onProgress);
 
   return rawList.map(raw => {
@@ -374,6 +433,7 @@ export async function getCustomFields(onProgress?: (count: number) => void): Pro
       'Relationship Target Type': raw.relationship_target_type || '',
       'Relationship Filter': filterStr,
       'Creator App Name': raw.creator_app_name || '',
+      URL: getDirectUrl(lookups.subdomain, 'custom_fields', raw.id),
       'Created At': formatDateUTC(raw.created_at),
       'Updated At': formatDateUTC(raw.updated_at),
     };
@@ -388,6 +448,7 @@ export async function getCustomFields(onProgress?: (count: number) => void): Pro
 
 // 9. Business Hours (Schedules)
 export async function getBusinessHours(onProgress?: (count: number) => void): Promise<ResourceItem<ZendeskScheduleRaw, ScheduleExportRow>[]> {
+  const lookups = await getZendeskLookups();
   const rawList = await fetchAllPages<ZendeskScheduleRaw>('/api/v2/business_hours/schedules.json', 'schedules', onProgress);
 
   return rawList.map(raw => {
@@ -404,6 +465,7 @@ export async function getBusinessHours(onProgress?: (count: number) => void): Pr
       Friday: days.Friday,
       Saturday: days.Saturday,
       Sunday: days.Sunday,
+      URL: getDirectUrl(lookups.subdomain, 'business_hours', raw.id),
       'Created At': formatDateUTC(raw.created_at),
       'Updated At': formatDateUTC(raw.updated_at),
     };
@@ -439,6 +501,7 @@ export async function getSupportAddresses(onProgress?: (count: number) => void):
       'CNAME Status': raw.cname_status || '',
       'DNS Verification Status': raw.dns_results || '',
       'Domain Verification Status': raw.domain_verification_status || '',
+      URL: getDirectUrl(lookups.subdomain, 'support_addresses', raw.id),
       'Created At': formatDateUTC(raw.created_at),
       'Updated At': formatDateUTC(raw.updated_at),
     };
@@ -497,6 +560,7 @@ export async function getForms(onProgress?: (count: number) => void): Promise<Re
       'Ticket Field IDs': fieldsStr,
       'Agent Conditions': agentConditionsStr,
       'End User Conditions': endUserConditionsStr,
+      URL: getDirectUrl(lookups.subdomain, 'forms', raw.id),
       'Created At': formatDateUTC(raw.created_at),
       'Updated At': formatDateUTC(raw.updated_at),
     };
@@ -526,6 +590,7 @@ export async function getSLAs(onProgress?: (count: number) => void): Promise<Res
       'All Conditions': all,
       'Any Conditions': any,
       Metrics: metricsStr,
+      URL: getDirectUrl(lookups.subdomain, 'slas', raw.id),
       'Created At': formatDateUTC(raw.created_at),
       'Updated At': formatDateUTC(raw.updated_at),
     };
@@ -554,6 +619,7 @@ export async function getGroupSLAs(onProgress?: (count: number) => void): Promis
       Position: Number(raw.position ?? 0),
       'All Conditions': all,
       'Policy Metrics': metricsStr,
+      URL: getDirectUrl(lookups.subdomain, 'group_slas', raw.id),
       'Created At': formatDateUTC(raw.created_at),
       'Updated At': formatDateUTC(raw.updated_at),
     };

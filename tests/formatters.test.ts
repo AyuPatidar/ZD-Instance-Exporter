@@ -70,6 +70,75 @@ describe('Condition Formatter', () => {
     expect(tagsPresent).toBe('Tags | Is Present');
   });
 
+  test('formats changed to null and changed to value cleanly for triggers', () => {
+    const lookups = createEmptyLookups();
+    lookups.users.set(4567, 'Alex Agent');
+
+    // 1. Assignee changed to null
+    const assigneeChangedNull = formatCondition({
+      field: 'assignee_id',
+      operator: 'changed',
+      value: null,
+    });
+    expect(assigneeChangedNull).toBe('Assignee | Changed to | null');
+
+    // 2. Assignee changed to specific user
+    const assigneeChangedUser = formatCondition(
+      {
+        field: 'assignee_id',
+        operator: 'changed',
+        value: 4567,
+      },
+      lookups
+    );
+    expect(assigneeChangedUser).toBe('Assignee | Changed to | Alex Agent (4567)');
+
+    // 3. Zendesk internal "value" (changed to) operator
+    const assigneeValueNull = formatCondition({
+      field: 'assignee_id',
+      operator: 'value',
+      value: null,
+    });
+    expect(assigneeValueNull).toBe('Assignee | Changed to | null');
+
+    // 4. Zendesk internal "value_previous" (changed from) operator
+    const assigneeValuePrev = formatCondition(
+      {
+        field: 'assignee_id',
+        operator: 'value_previous',
+        value: 4567,
+      },
+      lookups
+    );
+    expect(assigneeValuePrev).toBe('Assignee | Changed from | Alex Agent (4567)');
+
+    // 5. Group changed to null
+    const groupChangedNull = formatCondition({
+      field: 'group_id',
+      operator: 'changed',
+      value: null,
+    });
+    expect(groupChangedNull).toBe('Group | Changed to | null');
+
+    // 6. Numbered condition list with 2. Assignee | Changed to | null
+    const conditions = {
+      all: [
+        { field: 'status', operator: 'is', value: 'open' },
+        { field: 'assignee_id', operator: 'changed', value: null },
+      ],
+    };
+    const formattedList = formatConditions(conditions);
+    expect(formattedList.all).toBe('1. Status | Is | open\n2. Assignee | Changed to | null');
+
+    // 7. Via channel formatting
+    const viaEmail = formatCondition({
+      field: 'current_via_id',
+      operator: 'is',
+      value: 4,
+    });
+    expect(viaEmail).toBe('Via Channel | Is | Email (4)');
+  });
+
   test('formats custom roles and standard roles accurately', () => {
     const lookups = createEmptyLookups();
     lookups.customRoles.set(25176440012818, 'Tier 2 Specialist');
