@@ -42,6 +42,18 @@ const KNOWN_FIELD_NAMES: Record<string, string> = {
   current_via_id: 'Via Channel',
   reopen_sum: 'Reopens Count',
   update_type: 'Update Type',
+  recipient: 'Recipient Address',
+  subject_includes_word: 'Subject Includes Word',
+  subject_not_includes_word: 'Subject Does Not Include Word',
+  description_includes_word: 'Description Includes Word',
+  description_not_includes_word: 'Description Does Not Include Word',
+  comment_not_includes_word: 'Comment Does Not Include Word',
+  custom_status_id: 'Ticket Status',
+  ticket_is_public: 'Ticket Privacy',
+  sla_policy_id: 'SLA Policy',
+  group_sla_policy_id: 'Group SLA Policy',
+  problem_id: 'Problem Ticket',
+  due_date: 'Due Date',
 };
 
 const KNOWN_OPERATORS: Record<string, string> = {
@@ -55,12 +67,14 @@ const KNOWN_OPERATORS: Record<string, string> = {
   not_includes: 'Does Not Include',
   includes_all: 'Includes All',
   not_includes_all: 'Does Not Include All',
-  value: 'Is',
-  value_previous: 'Changed From',
+  value: 'Changed to',
+  value_previous: 'Changed from',
+  not_value: 'Not Changed to',
+  not_value_previous: 'Not Changed from',
   changed: 'Changed',
   not_changed: 'Did Not Change',
-  changed_to: 'Changed To',
-  changed_from: 'Changed From',
+  changed_to: 'Changed to',
+  changed_from: 'Changed from',
   present: 'Is Present',
   not_present: 'Is Not Present',
   is_empty: 'Is Empty',
@@ -68,6 +82,15 @@ const KNOWN_OPERATORS: Record<string, string> = {
   is_set: 'Is Set',
   is_not_set: 'Is Not Set',
 };
+
+export const PURE_UNARY_OPERATORS = new Set([
+  'present',
+  'not_present',
+  'is_empty',
+  'is_not_empty',
+  'is_set',
+  'is_not_set',
+]);
 
 export const UNARY_OPERATORS = new Set([
   'changed',
@@ -80,9 +103,59 @@ export const UNARY_OPERATORS = new Set([
   'is_not_set',
 ]);
 
-export function isUnaryOperator(op?: string): boolean {
+export const KNOWN_VIA_CHANNELS: Record<number, string> = {
+  0: 'Web form',
+  4: 'Email',
+  5: 'Chat',
+  8: 'Twitter',
+  9: 'System',
+  16: 'Closed ticket update',
+  23: 'Voice',
+  26: 'Web service (API)',
+  29: 'Rule (Trigger / Automation)',
+  30: 'Mobile',
+  31: 'Mobile SDK',
+  38: 'Help Center',
+  44: 'Any Channel',
+  45: 'Facebook',
+  46: 'Facebook Private Message',
+  48: 'Twitter DM',
+  49: 'Twitter Favorite',
+  55: 'Answer Bot',
+  56: 'Messaging',
+  67: 'WhatsApp',
+  71: 'Instagram Direct',
+};
+
+export function isChangeOperator(op?: string): boolean {
   if (!op) return false;
-  return UNARY_OPERATORS.has(op.toLowerCase());
+  const lower = op.toLowerCase();
+  return (
+    lower === 'changed' ||
+    lower === 'changed_to' ||
+    lower === 'value' ||
+    lower === 'changed_from' ||
+    lower === 'value_previous' ||
+    lower === 'not_value' ||
+    lower === 'not_value_previous'
+  );
+}
+
+export function isUnaryOperator(op?: string, value?: any): boolean {
+  if (!op) return false;
+  const lower = op.toLowerCase();
+  if (PURE_UNARY_OPERATORS.has(lower)) {
+    return true;
+  }
+  // 'changed' is unary only if value is undefined or empty string
+  if (lower === 'changed') {
+    return value === undefined || value === '';
+  }
+  // 'not_changed' is unary if value is undefined, empty string, or null
+  if (lower === 'not_changed') {
+    return value === undefined || value === '' || value === null;
+  }
+  return false;
 }
 
 export function formatOperator(op: string): string {
@@ -111,15 +184,32 @@ export function formatField(field: string, lookups?: ZendeskLookups): string {
   return field.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 }
 
-export function formatFieldValue(field: string, value: any, lookups?: ZendeskLookups): string {
+export function formatFieldValue(
+  field: string,
+  value: any,
+  lookups?: ZendeskLookups,
+  operator?: string
+): string {
   const lowerField = (field || '').toLowerCase();
+  const opLower = (operator || '').toLowerCase();
+  const isChange = isChangeOperator(opLower);
 
   if (Array.isArray(value)) {
-    return value.map(v => formatFieldValue(field, v, lookups)).join(', ');
+    return value.map(v => formatFieldValue(field, v, lookups, operator)).join(', ');
+  }
+
+  // Handle null / 'null' explicitly: if this is a change condition, show 'null'
+  if (value === null || value === 'null') {
+    if (isChange) {
+      return 'null';
+    }
   }
 
   // Handle empty / null / unassigned values
   if (value === null || value === undefined || value === '' || value === '-') {
+    if (isChange) {
+      return 'null';
+    }
     if (lowerField === 'group_id' || lowerField === 'group') {
       return '(unassigned)';
     }
@@ -145,7 +235,15 @@ export function formatFieldValue(field: string, value: any, lookups?: ZendeskLoo
     if (valLower === 'requester_id' && (lowerField === 'assignee_id' || lowerField === 'assignee')) return '(requester)';
     if (valLower === 'current_groups') return "(current user's groups)";
     if (valLower === 'assigned') return '(assigned)';
-    if (valLower === 'unassigned') return '(unassigned)';
+    if (valLower === 'unassigned') return isChange ? 'null' : '(unassigned)';
+  }
+
+  // Handle Channel (via_id / current_via_id)
+  if (lowerField === 'via_id' || lowerField === 'current_via_id') {
+    const viaNum = typeof value === 'number' ? value : parseInt(value, 10);
+    if (!isNaN(viaNum) && KNOWN_VIA_CHANNELS[viaNum]) {
+      return `${KNOWN_VIA_CHANNELS[viaNum]} (${viaNum})`;
+    }
   }
 
   // Handle Role (Standard roles)

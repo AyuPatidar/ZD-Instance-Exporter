@@ -1,6 +1,7 @@
 import { ZendeskLookups, createEmptyLookups, TicketFieldLookup } from '../../types/lookups';
 import { fetchAllPages } from './pagination';
 import { zendeskRequest } from './zendeskRequest';
+import { zafClient } from '../zaf/zafClient';
 import { ZendeskGroupRaw, ZendeskAgentRaw, ZendeskOrganizationRaw, ZendeskTicketFieldRaw, ZendeskTicketFormRaw } from '../../types/resources';
 
 let cachedLookups: ZendeskLookups | null = null;
@@ -17,6 +18,22 @@ export async function getZendeskLookups(forceRefresh = false): Promise<ZendeskLo
 
   lookupPromise = (async () => {
     const lookups = createEmptyLookups();
+
+    // Resolve subdomain
+    try {
+      const ctx = await zafClient.context();
+      if (ctx?.account?.subdomain) {
+        lookups.subdomain = ctx.account.subdomain;
+      }
+    } catch (err) {
+      console.warn('[Lookups] Could not retrieve subdomain from ZAF context:', err);
+    }
+    if (!lookups.subdomain && typeof window !== 'undefined' && window.location?.hostname) {
+      const match = window.location.hostname.match(/^([a-zA-Z0-9_-]+)\.zendesk\.com$/);
+      if (match) {
+        lookups.subdomain = match[1];
+      }
+    }
 
     // 1. Fetch Groups
     try {
@@ -139,6 +156,46 @@ export async function getZendeskLookups(forceRefresh = false): Promise<ZendeskLo
         }
       } catch (innerErr) {
         console.warn('[Lookups] Failed to fetch schedules for cross-referencing:', innerErr);
+      }
+    }
+
+    // 9. Fetch Trigger Categories
+    try {
+      const categories = await fetchAllPages<any>('/api/v2/trigger_categories.json?page[size]=100', 'trigger_categories');
+      for (const cat of categories) {
+        if (cat && cat.id) {
+          const catInfo = {
+            name: cat.name || '',
+            position: Number(cat.position ?? 0),
+          };
+          lookups.triggerCategories.set(cat.id, catInfo);
+          lookups.triggerCategories.set(String(cat.id), catInfo);
+          const numId = Number(cat.id);
+          if (!isNaN(numId)) {
+            lookups.triggerCategories.set(numId, catInfo);
+          }
+        }
+      }
+    } catch (err) {
+      try {
+        const directCat = await zendeskRequest<any>({ url: '/api/v2/trigger_categories.json', type: 'GET' });
+        const list = directCat?.trigger_categories || [];
+        for (const cat of list) {
+          if (cat && cat.id) {
+            const catInfo = {
+              name: cat.name || '',
+              position: Number(cat.position ?? 0),
+            };
+            lookups.triggerCategories.set(cat.id, catInfo);
+            lookups.triggerCategories.set(String(cat.id), catInfo);
+            const numId = Number(cat.id);
+            if (!isNaN(numId)) {
+              lookups.triggerCategories.set(numId, catInfo);
+            }
+          }
+        }
+      } catch (innerErr) {
+        console.warn('[Lookups] Trigger categories not available or restricted on this plan:', innerErr);
       }
     }
 

@@ -13,6 +13,7 @@ export interface ZendeskTriggerRaw {
   title: string;
   active: boolean;
   position: number;
+  category_id?: string | number | null;
   conditions: ZendeskConditions;
   actions: ZendeskAction[];
   description?: string;
@@ -25,10 +26,13 @@ export interface TriggerExportRow {
   ID: number;
   Title: string;
   Active: boolean;
+  'Category Name': string;
+  'Category Position': number | string;
   Position: number;
   'All Conditions': string;
   'Any Conditions': string;
   Actions: string;
+  URL: string;
   'Created At': string;
   'Updated At': string;
 }
@@ -54,6 +58,7 @@ export interface AutomationExportRow {
   'All Conditions': string;
   'Any Conditions': string;
   Actions: string;
+  URL: string;
   'Created At': string;
   'Updated At': string;
 }
@@ -100,6 +105,7 @@ export interface ViewExportRow {
   'Group Order': string;
   'Sort By': string;
   'Sort Order': string;
+  URL: string;
   'Created At': string;
   'Updated At': string;
 }
@@ -134,6 +140,7 @@ export interface OrganizationExportRow {
   'Shared Tickets': boolean;
   Tags: string;
   'Custom Fields': string;
+  URL: string;
   'Created At': string;
   'Updated At': string;
 }
@@ -189,6 +196,7 @@ export interface AgentExportRow {
   'Agent Brand IDs': string;
   Tags: string;
   'User Fields': string;
+  URL: string;
   'Created At': string;
   'Updated At': string;
   'Last Login At': string;
@@ -217,6 +225,7 @@ export interface GroupExportRow {
   Public: boolean;
   Deleted: boolean;
   'Agent Count': number | string;
+  URL: string;
   'Created At': string;
   'Updated At': string;
 }
@@ -247,6 +256,7 @@ export interface MacroExportRow {
   Default: boolean;
   Actions: string;
   Restriction: string;
+  URL: string;
   'Created At': string;
   'Updated At': string;
 }
@@ -306,6 +316,7 @@ export interface CustomFieldExportRow {
   'Relationship Target Type': string;
   'Relationship Filter': string;
   'Creator App Name': string;
+  URL: string;
   'Created At': string;
   'Updated At': string;
 }
@@ -337,6 +348,7 @@ export interface ScheduleExportRow {
   Friday: string;
   Saturday: string;
   Sunday: string;
+  URL: string;
   'Created At': string;
   'Updated At': string;
 }
@@ -369,6 +381,7 @@ export interface SupportAddressExportRow {
   'CNAME Status': string;
   'DNS Verification Status': string;
   'Domain Verification Status': string;
+  URL: string;
   'Created At': string;
   'Updated At': string;
 }
@@ -405,6 +418,7 @@ export interface TicketFormExportRow {
   'Ticket Field IDs': string;
   'Agent Conditions': string;
   'End User Conditions': string;
+  URL: string;
   'Created At': string;
   'Updated At': string;
 }
@@ -437,6 +451,7 @@ export interface SLAPolicyExportRow {
   'All Conditions': string;
   'Any Conditions': string;
   Metrics: string;
+  URL: string;
   'Created At': string;
   'Updated At': string;
 }
@@ -461,6 +476,7 @@ export interface GroupSLAPolicyExportRow {
   Position: number;
   'All Conditions': string;
   'Policy Metrics': string;
+  URL: string;
   'Created At': string;
   'Updated At': string;
 }

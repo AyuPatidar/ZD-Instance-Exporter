@@ -5,14 +5,30 @@ import { formatField, formatOperator, formatFieldValue, isUnaryOperator } from '
 export function formatCondition(cond: ZendeskCondition, lookups?: ZendeskLookups): string {
   if (!cond) return '';
   const fieldName = formatField(cond.field, lookups);
-  const operatorName = formatOperator(cond.operator);
-  
-  // Unary operators (e.g. 'changed', 'not_changed', 'present', 'not_present', 'is_empty', 'is_set') do not take a value
-  if (isUnaryOperator(cond.operator)) {
+  const opLower = (cond.operator || '').toLowerCase();
+
+  // If operator is 'changed':
+  // If cond.value is provided (including null, but not undefined and not empty string):
+  // e.g. { field: 'assignee_id', operator: 'changed', value: null } -> "Assignee | Changed to | null"
+  // e.g. { field: 'assignee_id', operator: 'changed', value: 12345 } -> "Assignee | Changed to | John Doe (12345)"
+  // If cond.value is undefined or '':
+  // e.g. { field: 'assignee_id', operator: 'changed', value: '' } -> "Assignee | Changed"
+  if (opLower === 'changed') {
+    if (cond.value !== undefined && cond.value !== '') {
+      const valDisplay = formatFieldValue(cond.field, cond.value, lookups, 'changed');
+      return `${fieldName} | Changed to | ${valDisplay}`;
+    }
+    return `${fieldName} | Changed`;
+  }
+
+  // Unary operators (e.g. 'not_changed', 'present', 'not_present', 'is_empty', 'is_set')
+  if (isUnaryOperator(cond.operator, cond.value)) {
+    const operatorName = formatOperator(cond.operator);
     return `${fieldName} | ${operatorName}`;
   }
 
-  const valueDisplay = formatFieldValue(cond.field, cond.value, lookups);
+  const operatorName = formatOperator(cond.operator);
+  const valueDisplay = formatFieldValue(cond.field, cond.value, lookups, cond.operator);
   
   if (!operatorName && !valueDisplay) {
     return fieldName;

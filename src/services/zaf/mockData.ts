@@ -5,6 +5,7 @@ export const mockTriggers = {
       title: "Notify Requester of Received Request",
       active: true,
       position: 1,
+      category_id: "36000990001",
       conditions: {
         all: [
           { field: "update_type", operator: "is", value: "Create" },
@@ -24,6 +25,7 @@ export const mockTriggers = {
       title: "Route VIP Tickets to Tier 2 Support",
       active: true,
       position: 2,
+      category_id: "36000990002",
       conditions: {
         all: [
           { field: "status", operator: "is", value: "new" },
@@ -44,6 +46,7 @@ export const mockTriggers = {
       title: "Assign Bug Reports to Engineering Queue",
       active: true,
       position: 3,
+      category_id: "36000990002",
       conditions: {
         all: [
           { field: "type", operator: "is", value: "incident" },
@@ -577,6 +580,21 @@ export const mockCustomRoles = {
       name: "Tier 2 Specialist",
       description: "Escalation handling team member",
       role_type: 0
+    }
+  ]
+};
+
+export const mockTriggerCategories = {
+  trigger_categories: [
+    {
+      id: "36000990001",
+      name: "Notifications",
+      position: 1
+    },
+    {
+      id: "36000990002",
+      name: "Routing & Assignment",
+      position: 2
     }
   ]
 };
