@@ -66,3 +66,20 @@ export async function fetchAllPages<T>(
 
   return allRecords;
 }
+
+export async function fetchWithUsageFallback<T>(
+  urlWithUsage: string,
+  fallbackUrl: string,
+  resourceKey: string,
+  onProgress?: (count: number) => void
+): Promise<T[]> {
+  try {
+    return await fetchAllPages<T>(urlWithUsage, resourceKey, onProgress);
+  } catch (err: any) {
+    console.warn(
+      `[ConfigServices] Failed to fetch ${resourceKey} with usage parameters, falling back without usage parameters:`,
+      err
+    );
+    return await fetchAllPages<T>(fallbackUrl, resourceKey, onProgress);
+  }
+}

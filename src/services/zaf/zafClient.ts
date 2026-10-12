@@ -16,6 +16,9 @@ import {
   mockBrands,
   mockCustomRoles,
   mockTriggerCategories,
+  mockOrganizationFields,
+  mockUserFields,
+  mockGroupMemberships,
 } from './mockData';
 
 class MockZAFClient implements ZAFClientInstance {
@@ -72,11 +75,20 @@ class MockZAFClient implements ZAFClientInstance {
     if (url.includes('/api/v2/views')) {
       return mockViews as unknown as T;
     }
+    if (url.includes('/api/v2/organization_fields')) {
+      return mockOrganizationFields as unknown as T;
+    }
     if (url.includes('/api/v2/organizations')) {
       return mockOrganizations as unknown as T;
     }
+    if (url.includes('/api/v2/user_fields')) {
+      return mockUserFields as unknown as T;
+    }
     if (url.includes('/api/v2/users')) {
       return mockAgents as unknown as T;
+    }
+    if (url.includes('/api/v2/group_memberships')) {
+      return mockGroupMemberships as unknown as T;
     }
     if (url.includes('/api/v2/groups')) {
       return mockGroups as unknown as T;
@@ -86,6 +98,14 @@ class MockZAFClient implements ZAFClientInstance {
     }
     if (url.includes('/api/v2/ticket_fields')) {
       return mockTicketFields as unknown as T;
+    }
+    if (url.includes('/holidays')) {
+      return {
+        holidays: [
+          { id: 1, name: 'Christmas Day', start_date: '2025-12-25', end_date: '2025-12-25' },
+          { id: 2, name: "New Year's Day", start_date: '2026-01-01', end_date: '2026-01-01' }
+        ]
+      } as unknown as T;
     }
     if (url.includes('/api/v2/business_hours/schedules')) {
       return mockSchedules as unknown as T;
@@ -107,6 +127,12 @@ class MockZAFClient implements ZAFClientInstance {
     }
     if (url.includes('/api/v2/custom_roles')) {
       return mockCustomRoles as unknown as T;
+    }
+
+    if (url.includes('/api/v2/unsupported') || url.includes('/error')) {
+      const err: any = new Error(`Simulated error for URL: ${url}`);
+      err.status = 400;
+      throw err;
     }
 
     console.warn(`[MockZAFClient] Unhandled URL: ${url}`);

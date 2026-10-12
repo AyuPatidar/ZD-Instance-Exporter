@@ -6,7 +6,7 @@ import {
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
-  Download,
+  // Download,
   RefreshCw,
   Eye,
   AlertCircle,
@@ -24,7 +24,7 @@ interface DataTableProps<TRaw = any, TExport = any> {
   loading: boolean;
   error?: string | null;
   onRefresh: () => void;
-  onExportTab: () => void;
+  onExportTab?: () => void;
   onViewRaw: (item: ResourceItem<TRaw, TExport>) => void;
 }
 
@@ -34,7 +34,7 @@ export const DataTable: React.FC<DataTableProps> = ({
   loading,
   error,
   onRefresh,
-  onExportTab,
+  // onExportTab,
   onViewRaw,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -175,7 +175,8 @@ export const DataTable: React.FC<DataTableProps> = ({
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-blue-600' : ''}`} />
           </button>
 
-          {/* Export Current Tab Button */}
+          {/* Export Current Tab Button (Commented out for now - only Export All is active) */}
+          {/*
           <button
             onClick={onExportTab}
             disabled={loading || items.length === 0}
@@ -185,6 +186,7 @@ export const DataTable: React.FC<DataTableProps> = ({
             <Download className="w-3.5 h-3.5 mr-1.5 text-emerald-700" />
             Export Tab XLSX
           </button>
+          */}
         </div>
       </div>
 

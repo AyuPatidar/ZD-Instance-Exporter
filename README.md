@@ -7,13 +7,13 @@ A production-quality Zendesk Support app built with **React**, **TypeScript**, *
 ## Key Features
 
 - **13 Configuration Resources Supported**:
-  1. **Triggers**: Condition trees, actions, active status, position order.
-  2. **Automations**: Time-based rules, conditions, and actions.
+  1. **Triggers**: Condition trees, actions, active status, position order, and execution usage metrics (`1h`, `24h`, `7d`, `30d`).
+  2. **Automations**: Time-based rules, conditions, actions, and ticket processing usage metrics (`1h`, `24h`, `7d`, `30d`).
   3. **Views**: Filters, output columns, sorting, group-by, and access restrictions.
   4. **Organizations**: Domains, custom organization fields, tags, and groups.
   5. **Agents**: Team members and admins, roles, custom roles, groups, and brand access.
   6. **Groups**: Routing queues, agent counts, public/default flags.
-  7. **Macros**: Full action steps, privacy/group restrictions.
+  7. **Macros**: Full action steps, privacy/group restrictions, and agent usage metrics (`1h`, `24h`, `7d`, `30d`).
   8. **Custom Fields**: Ticket fields, types, portal visibility, and formatted dropdown tagger options (`Name → Value [Default]`).
   9. **Business Hours**: Schedules converted from weekly minute offsets into human-readable weekday hours (`09:00 - 17:00` or `Closed`).
   10. **Support Addresses**: Support emails, brands, SPF/CNAME/forwarding verification statuses.

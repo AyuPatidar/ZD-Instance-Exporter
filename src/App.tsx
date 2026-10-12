@@ -22,7 +22,12 @@ import {
   getSLAs,
   getGroupSLAs,
 } from './services/api/configServices';
-import { exportSingleTabToXLSX, exportMultipleTabsToXLSX, TabExportData, generateExportFilename } from './services/export/xlsxExporter';
+import {
+  exportMultipleTabsToXLSX,
+  TabExportData,
+  generateExportFilename,
+  exportIndividualTabWorkbook,
+} from './services/export/xlsxExporter';
 
 export const App: React.FC = () => {
   // Account & App State
@@ -123,14 +128,22 @@ export const App: React.FC = () => {
     }
   };
 
+  // Tab counts for badge display and audit summary
+  const tabCounts = React.useMemo(
+    () =>
+      Object.fromEntries(
+        Object.entries(datasets).map(([k, v]) => [k, v ? v.length : undefined])
+      ),
+    [datasets]
+  );
+
   // Export Active Tab to XLSX
-  const handleExportCurrentTab = () => {
+  const handleExportCurrentTab = async () => {
     const currentTabInfo = TABS.find(t => t.key === activeTab);
     const items = datasets[activeTab] || [];
     if (!currentTabInfo || items.length === 0) return;
 
-    const rows = items.map(item => item.exportRow);
-    exportSingleTabToXLSX(currentTabInfo.sheetName, rows, subdomain);
+    await exportIndividualTabWorkbook(activeTab, currentTabInfo, items, subdomain, tabCounts);
   };
 
   // Export All as Multi-Sheet XLSX
@@ -207,10 +220,6 @@ export const App: React.FC = () => {
     setIsExportAllRunning(false);
   };
 
-  // Tab counts for badge display
-  const tabCounts = Object.fromEntries(
-    Object.entries(datasets).map(([k, v]) => [k, v ? v.length : undefined])
-  );
 
   const activeTabInfo = TABS.find(t => t.key === activeTab) || TABS[0];
   const activeItems = datasets[activeTab] || [];

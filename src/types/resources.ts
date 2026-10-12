@@ -17,6 +17,10 @@ export interface ZendeskTriggerRaw {
   conditions: ZendeskConditions;
   actions: ZendeskAction[];
   description?: string;
+  usage_1h?: number;
+  usage_24h?: number;
+  usage_7d?: number;
+  usage_30d?: number;
   created_at: string;
   updated_at: string;
   [key: string]: any;
@@ -25,10 +29,15 @@ export interface ZendeskTriggerRaw {
 export interface TriggerExportRow {
   ID: number;
   Title: string;
+  Description: string;
   Active: boolean;
   'Category Name': string;
   'Category Position': number | string;
   Position: number;
+  'Usage (1h)': number | string;
+  'Usage (24h)': number | string;
+  'Usage (7d)': number | string;
+  'Usage (30d)': number | string;
   'All Conditions': string;
   'Any Conditions': string;
   Actions: string;
@@ -45,6 +54,10 @@ export interface ZendeskAutomationRaw {
   position: number;
   conditions: ZendeskConditions;
   actions: ZendeskAction[];
+  usage_1h?: number;
+  usage_24h?: number;
+  usage_7d?: number;
+  usage_30d?: number;
   created_at: string;
   updated_at: string;
   [key: string]: any;
@@ -53,8 +66,13 @@ export interface ZendeskAutomationRaw {
 export interface AutomationExportRow {
   ID: number;
   Title: string;
+  Description: string;
   Active: boolean;
   Position: number;
+  'Usage (1h)': number | string;
+  'Usage (24h)': number | string;
+  'Usage (7d)': number | string;
+  'Usage (30d)': number | string;
   'All Conditions': string;
   'Any Conditions': string;
   Actions: string;
@@ -98,6 +116,8 @@ export interface ViewExportRow {
   Position: number;
   Description: string;
   'Access Restriction': string;
+  'SLA ID': number | string;
+  Watchable: boolean;
   'All Conditions': string;
   'Any Conditions': string;
   Columns: string;
@@ -138,6 +158,7 @@ export interface OrganizationExportRow {
   'Group ID': string;
   'Shared Comments': boolean;
   'Shared Tickets': boolean;
+  'Ticket Restriction': string;
   Tags: string;
   'Custom Fields': string;
   URL: string;
@@ -182,10 +203,15 @@ export interface AgentExportRow {
   Role: string;
   'Role Type': string;
   'Custom Role ID': number | string;
+  'Custom Role Name': string;
   Active: boolean;
   Suspended: boolean;
+  'Two-Factor Auth Enabled': boolean;
   'Restricted Agent': boolean;
+  'Ticket Restriction': string;
+  'Only Private Comments': boolean;
   Alias: string;
+  'External ID': string;
   Details: string;
   Notes: string;
   Phone: string;
@@ -243,6 +269,10 @@ export interface ZendeskMacroRaw {
     id?: number;
     ids?: number[];
   };
+  usage_1h?: number;
+  usage_24h?: number;
+  usage_7d?: number;
+  usage_30d?: number;
   created_at: string;
   updated_at: string;
   [key: string]: any;
@@ -254,6 +284,10 @@ export interface MacroExportRow {
   Description: string;
   Active: boolean;
   Default: boolean;
+  'Usage (1h)': number | string;
+  'Usage (24h)': number | string;
+  'Usage (7d)': number | string;
+  'Usage (30d)': number | string;
   Actions: string;
   Restriction: string;
   URL: string;
@@ -299,7 +333,10 @@ export interface CustomFieldExportRow {
   ID: number;
   Title: string;
   Type: string;
+  Key: string;
   Active: boolean;
+  Removable: boolean;
+  'Sub Type ID': number | string;
   Description: string;
   'Agent Description': string;
   'Title In Portal': string;
@@ -332,6 +369,7 @@ export interface ZendeskScheduleRaw {
   name: string;
   time_zone: string;
   intervals: ZendeskWorkWeekInterval[];
+  holidays?: Array<{ id?: number; name?: string; start_date?: string; end_date?: string }>;
   created_at: string;
   updated_at: string;
   [key: string]: any;
@@ -348,6 +386,7 @@ export interface ScheduleExportRow {
   Friday: string;
   Saturday: string;
   Sunday: string;
+  Holidays: string;
   URL: string;
   'Created At': string;
   'Updated At': string;
@@ -381,6 +420,7 @@ export interface SupportAddressExportRow {
   'CNAME Status': string;
   'DNS Verification Status': string;
   'Domain Verification Status': string;
+  'Domain Verification Code': string;
   URL: string;
   'Created At': string;
   'Updated At': string;
@@ -475,6 +515,7 @@ export interface GroupSLAPolicyExportRow {
   Description: string;
   Position: number;
   'All Conditions': string;
+  'Any Conditions': string;
   'Policy Metrics': string;
   URL: string;
   'Created At': string;

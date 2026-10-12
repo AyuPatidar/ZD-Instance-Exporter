@@ -1,4 +1,5 @@
-import { fetchAllPages } from './pagination';
+import { fetchAllPages, fetchWithUsageFallback } from './pagination';
+import { zendeskRequest } from './zendeskRequest';
 import { getZendeskLookups } from './lookupService';
 import {
   ResourceItem,
@@ -32,9 +33,9 @@ import {
 } from '../../types/resources';
 import { formatConditions } from '../../utils/formatters/conditionFormatter';
 import { formatActionList } from '../../utils/formatters/actionFormatter';
-import { formatScheduleIntervals } from '../../utils/formatters/scheduleFormatter';
+import { formatScheduleIntervals, formatScheduleHolidays } from '../../utils/formatters/scheduleFormatter';
 import { formatSLAMetricsList } from '../../utils/formatters/slaFormatter';
-import { formatCustomFieldOptions } from '../../utils/formatters/customFieldFormatter';
+import { formatCustomFieldOptions, formatRecordCustomFields } from '../../utils/formatters/customFieldFormatter';
 import { formatDateUTC } from '../../utils/formatters/dateFormatter';
 
 export function getDirectUrl(subdomain: string, type: ConfigTabKey, id: number | string): string {
@@ -74,7 +75,12 @@ export function getDirectUrl(subdomain: string, type: ConfigTabKey, id: number |
 // 1. Triggers
 export async function getTriggers(onProgress?: (count: number) => void): Promise<ResourceItem<ZendeskTriggerRaw, TriggerExportRow>[]> {
   const lookups = await getZendeskLookups();
-  const rawList = await fetchAllPages<ZendeskTriggerRaw>('/api/v2/triggers.json?page[size]=100', 'triggers', onProgress);
+  const rawList = await fetchWithUsageFallback<ZendeskTriggerRaw>(
+    '/api/v2/triggers.json?include=usage_1h,usage_24h,usage_7d,usage_30d&page[size]=100',
+    '/api/v2/triggers.json?page[size]=100',
+    'triggers',
+    onProgress
+  );
 
   return rawList.map(raw => {
     const { all, any } = formatConditions(raw.conditions, lookups);
@@ -96,10 +102,15 @@ export async function getTriggers(onProgress?: (count: number) => void): Promise
     const exportRow: TriggerExportRow = {
       ID: raw.id,
       Title: raw.title || '',
+      Description: raw.description || '',
       Active: Boolean(raw.active),
       'Category Name': categoryName,
       'Category Position': categoryPosition,
       Position: Number(raw.position ?? 0),
+      'Usage (1h)': raw.usage_1h !== undefined && raw.usage_1h !== null ? Number(raw.usage_1h) : '',
+      'Usage (24h)': raw.usage_24h !== undefined && raw.usage_24h !== null ? Number(raw.usage_24h) : '',
+      'Usage (7d)': raw.usage_7d !== undefined && raw.usage_7d !== null ? Number(raw.usage_7d) : '',
+      'Usage (30d)': raw.usage_30d !== undefined && raw.usage_30d !== null ? Number(raw.usage_30d) : '',
       'All Conditions': all,
       'Any Conditions': any,
       Actions: actions,
@@ -119,7 +130,12 @@ export async function getTriggers(onProgress?: (count: number) => void): Promise
 // 2. Automations
 export async function getAutomations(onProgress?: (count: number) => void): Promise<ResourceItem<ZendeskAutomationRaw, AutomationExportRow>[]> {
   const lookups = await getZendeskLookups();
-  const rawList = await fetchAllPages<ZendeskAutomationRaw>('/api/v2/automations.json?page[size]=100', 'automations', onProgress);
+  const rawList = await fetchWithUsageFallback<ZendeskAutomationRaw>(
+    '/api/v2/automations.json?include=usage_1h,usage_24h,usage_7d,usage_30d&page[size]=100',
+    '/api/v2/automations.json?page[size]=100',
+    'automations',
+    onProgress
+  );
 
   return rawList.map(raw => {
     const { all, any } = formatConditions(raw.conditions, lookups);
@@ -128,8 +144,13 @@ export async function getAutomations(onProgress?: (count: number) => void): Prom
     const exportRow: AutomationExportRow = {
       ID: raw.id,
       Title: raw.title || '',
+      Description: raw.description || '',
       Active: Boolean(raw.active),
       Position: Number(raw.position ?? 0),
+      'Usage (1h)': raw.usage_1h !== undefined && raw.usage_1h !== null ? Number(raw.usage_1h) : '',
+      'Usage (24h)': raw.usage_24h !== undefined && raw.usage_24h !== null ? Number(raw.usage_24h) : '',
+      'Usage (7d)': raw.usage_7d !== undefined && raw.usage_7d !== null ? Number(raw.usage_7d) : '',
+      'Usage (30d)': raw.usage_30d !== undefined && raw.usage_30d !== null ? Number(raw.usage_30d) : '',
       'All Conditions': all,
       'Any Conditions': any,
       Actions: actions,
@@ -182,6 +203,8 @@ export async function getViews(onProgress?: (count: number) => void): Promise<Re
       Position: Number(raw.position ?? 0),
       Description: raw.description || '',
       'Access Restriction': restrictionStr,
+      'SLA ID': raw.sla_id ? Number(raw.sla_id) : '',
+      Watchable: Boolean(raw.watchable),
       'All Conditions': all,
       'Any Conditions': any,
       Columns: columns,
@@ -219,13 +242,12 @@ export async function getOrganizations(onProgress?: (count: number) => void): Pr
       groupStr = gName ? `${gName} (${raw.group_id})` : String(raw.group_id);
     }
 
-    let customFieldsStr = '';
-    if (raw.organization_fields && typeof raw.organization_fields === 'object') {
-      customFieldsStr = Object.entries(raw.organization_fields)
-        .filter(([_, v]) => v !== null && v !== undefined && v !== '')
-        .map(([k, v], idx) => `${idx + 1}. ${k}: ${v}`)
-        .join('\n');
-    }
+    const customFieldsStr = formatRecordCustomFields(
+      raw.organization_fields,
+      raw.custom_fields,
+      lookups.organizationFields,
+      lookups.organizationFieldsMap
+    );
 
     const exportRow: OrganizationExportRow = {
       ID: raw.id,
@@ -237,6 +259,7 @@ export async function getOrganizations(onProgress?: (count: number) => void): Pr
       'Group ID': groupStr,
       'Shared Comments': Boolean(raw.shared_comments),
       'Shared Tickets': Boolean(raw.shared_tickets),
+      'Ticket Restriction': raw.ticket_restriction || '',
       Tags: tags,
       'Custom Fields': customFieldsStr,
       URL: getDirectUrl(lookups.subdomain, 'organizations', raw.id),
@@ -268,16 +291,19 @@ export async function getAgents(onProgress?: (count: number) => void): Promise<R
     }
 
     let groupIdsStr = '';
-    if (Array.isArray(raw.group_ids) && raw.group_ids.length > 0) {
-      groupIdsStr = raw.group_ids
+    const userGroups =
+      Array.isArray(raw.group_ids) && raw.group_ids.length > 0
+        ? raw.group_ids
+        : lookups.userGroupIds?.get(raw.id) ||
+          (raw.default_group_id ? [raw.default_group_id] : []);
+
+    if (userGroups.length > 0) {
+      groupIdsStr = userGroups
         .map(gid => {
           const gName = lookups.groups.get(gid);
           return gName ? `${gName} (${gid})` : String(gid);
         })
         .join(', ');
-    } else if (raw.default_group_id) {
-      const gName = lookups.groups.get(raw.default_group_id);
-      groupIdsStr = gName ? `${gName} (${raw.default_group_id})` : String(raw.default_group_id);
     }
 
     const brandIdsStr = Array.isArray(raw.agent_brand_ids)
@@ -291,12 +317,20 @@ export async function getAgents(onProgress?: (count: number) => void): Promise<R
 
     const tags = Array.isArray(raw.tags) ? raw.tags.join(', ') : '';
 
-    let userFieldsStr = '';
-    if (raw.user_fields && typeof raw.user_fields === 'object') {
-      userFieldsStr = Object.entries(raw.user_fields)
-        .filter(([_, v]) => v !== null && v !== undefined && v !== '')
-        .map(([k, v], idx) => `${idx + 1}. ${k}: ${v}`)
-        .join('\n');
+    const userFieldsStr = formatRecordCustomFields(
+      raw.user_fields,
+      raw.custom_fields,
+      lookups.userFields,
+      lookups.userFieldsMap
+    );
+
+    let customRoleName = '';
+    if (raw.custom_role_id) {
+      customRoleName =
+        lookups.customRoles.get(raw.custom_role_id) ||
+        lookups.customRoles.get(String(raw.custom_role_id)) ||
+        lookups.customRoles.get(Number(raw.custom_role_id)) ||
+        '';
     }
 
     const exportRow: AgentExportRow = {
@@ -306,10 +340,15 @@ export async function getAgents(onProgress?: (count: number) => void): Promise<R
       Role: raw.role || '',
       'Role Type': raw.role_type !== undefined ? String(raw.role_type) : '',
       'Custom Role ID': raw.custom_role_id ?? '',
+      'Custom Role Name': customRoleName,
       Active: Boolean(raw.active),
       Suspended: Boolean(raw.suspended),
+      'Two-Factor Auth Enabled': Boolean(raw.two_factor_auth_enabled),
       'Restricted Agent': Boolean(raw.restricted_agent),
+      'Ticket Restriction': raw.ticket_restriction || '',
+      'Only Private Comments': Boolean(raw.only_private_comments),
       Alias: raw.alias || '',
+      'External ID': raw.external_id || '',
       Details: raw.details || '',
       Notes: raw.notes || '',
       Phone: raw.phone || '',
@@ -341,6 +380,17 @@ export async function getGroups(onProgress?: (count: number) => void): Promise<R
   const rawList = await fetchAllPages<ZendeskGroupRaw>('/api/v2/groups.json?page[size]=100', 'groups', onProgress);
 
   return rawList.map(raw => {
+    // Resolve agent count:
+    // 1. Check lookups.groupAgentCounts (populated from group_memberships or agent records)
+    // 2. Check raw.agent_count (from mock or API)
+    // 3. Fallback to 0 (ensures an actual number in Excel rather than blank)
+    let agentCount: number = 0;
+    if (lookups.groupAgentCounts && lookups.groupAgentCounts.has(raw.id)) {
+      agentCount = lookups.groupAgentCounts.get(raw.id)!;
+    } else if (raw.agent_count !== undefined && raw.agent_count !== null) {
+      agentCount = Number(raw.agent_count);
+    }
+
     const exportRow: GroupExportRow = {
       ID: raw.id,
       Name: raw.name || '',
@@ -348,7 +398,7 @@ export async function getGroups(onProgress?: (count: number) => void): Promise<R
       Default: Boolean(raw.default),
       Public: Boolean(raw.is_public),
       Deleted: Boolean(raw.deleted),
-      'Agent Count': raw.agent_count !== undefined && raw.agent_count !== null ? raw.agent_count : '',
+      'Agent Count': agentCount,
       URL: getDirectUrl(lookups.subdomain, 'groups', raw.id),
       'Created At': formatDateUTC(raw.created_at),
       'Updated At': formatDateUTC(raw.updated_at),
@@ -356,7 +406,7 @@ export async function getGroups(onProgress?: (count: number) => void): Promise<R
 
     return {
       id: raw.id,
-      raw,
+      raw: { ...raw, agent_count: agentCount },
       exportRow,
     };
   });
@@ -365,7 +415,12 @@ export async function getGroups(onProgress?: (count: number) => void): Promise<R
 // 7. Macros
 export async function getMacros(onProgress?: (count: number) => void): Promise<ResourceItem<ZendeskMacroRaw, MacroExportRow>[]> {
   const lookups = await getZendeskLookups();
-  const rawList = await fetchAllPages<ZendeskMacroRaw>('/api/v2/macros.json?page[size]=100', 'macros', onProgress);
+  const rawList = await fetchWithUsageFallback<ZendeskMacroRaw>(
+    '/api/v2/macros.json?include=usage_1h,usage_24h,usage_7d,usage_30d&page[size]=100',
+    '/api/v2/macros.json?page[size]=100',
+    'macros',
+    onProgress
+  );
 
   return rawList.map(raw => {
     const actions = formatActionList(raw.actions, lookups);
@@ -386,6 +441,10 @@ export async function getMacros(onProgress?: (count: number) => void): Promise<R
       Description: raw.description || '',
       Active: Boolean(raw.active),
       Default: Boolean(raw.default),
+      'Usage (1h)': raw.usage_1h !== undefined && raw.usage_1h !== null ? Number(raw.usage_1h) : '',
+      'Usage (24h)': raw.usage_24h !== undefined && raw.usage_24h !== null ? Number(raw.usage_24h) : '',
+      'Usage (7d)': raw.usage_7d !== undefined && raw.usage_7d !== null ? Number(raw.usage_7d) : '',
+      'Usage (30d)': raw.usage_30d !== undefined && raw.usage_30d !== null ? Number(raw.usage_30d) : '',
       Actions: actions,
       Restriction: restrictionStr,
       URL: getDirectUrl(lookups.subdomain, 'macros', raw.id),
@@ -407,7 +466,13 @@ export async function getCustomFields(onProgress?: (count: number) => void): Pro
   const rawList = await fetchAllPages<ZendeskTicketFieldRaw>('/api/v2/ticket_fields.json?page[size]=100', 'ticket_fields', onProgress);
 
   return rawList.map(raw => {
-    const optionsStr = formatCustomFieldOptions(raw.custom_field_options);
+    const optionsList =
+      raw.custom_field_options && raw.custom_field_options.length > 0
+        ? raw.custom_field_options
+        : raw.system_field_options && raw.system_field_options.length > 0
+          ? raw.system_field_options
+          : raw.custom_statuses;
+    const optionsStr = formatCustomFieldOptions(optionsList);
     const filterStr = raw.relationship_filter ? JSON.stringify(raw.relationship_filter) : '';
     const isSystemField = raw.removable === false || ['subject', 'description', 'status', 'tickettype', 'priority', 'group', 'assignee'].includes((raw.type || '').toLowerCase());
     const displayType = isSystemField ? `[System] ${raw.type}` : raw.type;
@@ -416,7 +481,10 @@ export async function getCustomFields(onProgress?: (count: number) => void): Pro
       ID: raw.id,
       Title: raw.title || '',
       Type: displayType || '',
+      Key: raw.key || '',
       Active: Boolean(raw.active),
+      Removable: raw.removable !== undefined ? Boolean(raw.removable) : true,
+      'Sub Type ID': raw.sub_type_id !== undefined && raw.sub_type_id !== null ? Number(raw.sub_type_id) : '',
       Description: raw.description || '',
       'Agent Description': raw.agent_description || '',
       'Title In Portal': raw.title_in_portal || '',
@@ -451,8 +519,27 @@ export async function getBusinessHours(onProgress?: (count: number) => void): Pr
   const lookups = await getZendeskLookups();
   const rawList = await fetchAllPages<ZendeskScheduleRaw>('/api/v2/business_hours/schedules.json', 'schedules', onProgress);
 
-  return rawList.map(raw => {
+  const schedulesWithHolidays = await Promise.all(
+    rawList.map(async raw => {
+      if (raw.holidays && Array.isArray(raw.holidays)) {
+        return raw;
+      }
+      try {
+        const res = await zendeskRequest<any>({
+          url: `/api/v2/business_hours/schedules/${raw.id}/holidays.json`,
+          type: 'GET',
+        });
+        const holidays = res?.holidays || [];
+        return { ...raw, holidays };
+      } catch {
+        return { ...raw, holidays: [] };
+      }
+    })
+  );
+
+  return schedulesWithHolidays.map(raw => {
     const days = formatScheduleIntervals(raw.intervals);
+    const holidaysStr = formatScheduleHolidays(raw.holidays);
 
     const exportRow: ScheduleExportRow = {
       ID: raw.id,
@@ -465,6 +552,7 @@ export async function getBusinessHours(onProgress?: (count: number) => void): Pr
       Friday: days.Friday,
       Saturday: days.Saturday,
       Sunday: days.Sunday,
+      Holidays: holidaysStr,
       URL: getDirectUrl(lookups.subdomain, 'business_hours', raw.id),
       'Created At': formatDateUTC(raw.created_at),
       'Updated At': formatDateUTC(raw.updated_at),
@@ -490,6 +578,33 @@ export async function getSupportAddresses(onProgress?: (count: number) => void):
       brandStr = bName ? `${bName} (${raw.brand_id})` : String(raw.brand_id);
     }
 
+    let dnsStatus = '';
+    if (raw.dns_results) {
+      if (typeof raw.dns_results === 'string') {
+        dnsStatus = raw.dns_results;
+      } else if (typeof raw.dns_results === 'object') {
+        try {
+          dnsStatus = JSON.stringify(raw.dns_results);
+        } catch {
+          dnsStatus = String(raw.dns_results);
+        }
+      }
+    } else if (raw.dns_check_status) {
+      dnsStatus = String(raw.dns_check_status);
+    } else if (raw.dns_status) {
+      dnsStatus = String(raw.dns_status);
+    } else if (raw.cname_status && raw.cname_status !== 'unknown') {
+      dnsStatus = raw.cname_status;
+    } else if (raw.domain_verification_status && raw.domain_verification_status !== 'unknown') {
+      dnsStatus = raw.domain_verification_status;
+    } else if (raw.cname_status) {
+      dnsStatus = raw.cname_status;
+    } else if (raw.domain_verification_status) {
+      dnsStatus = raw.domain_verification_status;
+    } else if (raw.email && /@.*\.zendesk\.com$/i.test(raw.email)) {
+      dnsStatus = 'verified (native)';
+    }
+
     const exportRow: SupportAddressExportRow = {
       ID: raw.id,
       Name: raw.name || '',
@@ -499,8 +614,9 @@ export async function getSupportAddresses(onProgress?: (count: number) => void):
       'Forwarding Status': raw.forwarding_status || '',
       'SPF Status': raw.spf_status || '',
       'CNAME Status': raw.cname_status || '',
-      'DNS Verification Status': raw.dns_results || '',
+      'DNS Verification Status': dnsStatus,
       'Domain Verification Status': raw.domain_verification_status || '',
+      'Domain Verification Code': raw.domain_verification_code || '',
       URL: getDirectUrl(lookups.subdomain, 'support_addresses', raw.id),
       'Created At': formatDateUTC(raw.created_at),
       'Updated At': formatDateUTC(raw.updated_at),
@@ -609,7 +725,7 @@ export async function getGroupSLAs(onProgress?: (count: number) => void): Promis
   const rawList = await fetchAllPages<ZendeskGroupSLAPolicyRaw>('/api/v2/group_slas/policies.json', 'group_sla_policies', onProgress);
 
   return rawList.map(raw => {
-    const { all } = formatConditions(raw.filter, lookups);
+    const { all, any } = formatConditions(raw.filter, lookups);
     const metricsStr = formatSLAMetricsList(raw.policy_metrics);
 
     const exportRow: GroupSLAPolicyExportRow = {
@@ -618,6 +734,7 @@ export async function getGroupSLAs(onProgress?: (count: number) => void): Promis
       Description: raw.description || '',
       Position: Number(raw.position ?? 0),
       'All Conditions': all,
+      'Any Conditions': any,
       'Policy Metrics': metricsStr,
       URL: getDirectUrl(lookups.subdomain, 'group_slas', raw.id),
       'Created At': formatDateUTC(raw.created_at),

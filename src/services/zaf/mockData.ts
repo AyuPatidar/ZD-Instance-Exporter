@@ -17,6 +17,10 @@ export const mockTriggers = {
         { field: "notification_user", value: ["requester_and_ccs", "Your request {{ticket.id}} has been received"] }
       ],
       description: "Auto-responder for newly created tickets",
+      usage_1h: 14,
+      usage_24h: 312,
+      usage_7d: 2180,
+      usage_30d: 9450,
       created_at: "2024-01-15T10:00:00Z",
       updated_at: "2024-08-20T14:22:00Z"
     },
@@ -38,6 +42,10 @@ export const mockTriggers = {
         { field: "priority", value: "high" }
       ],
       description: "Priority routing for VIP accounts",
+      usage_1h: 2,
+      usage_24h: 45,
+      usage_7d: 310,
+      usage_30d: 1240,
       created_at: "2024-02-10T11:30:00Z",
       updated_at: "2024-09-01T09:15:00Z"
     },
@@ -59,6 +67,10 @@ export const mockTriggers = {
         { field: "set_tags", value: "bug_reviewed" }
       ],
       description: "Route software defects directly to dev support",
+      usage_1h: 0,
+      usage_24h: 18,
+      usage_7d: 142,
+      usage_30d: 580,
       created_at: "2024-03-05T08:45:00Z",
       updated_at: "2024-07-12T16:40:00Z"
     }
@@ -70,6 +82,7 @@ export const mockAutomations = {
     {
       id: 36002234501,
       title: "Close Pending Tickets After 4 Days of Inactivity",
+      description: "Close pending tickets after 4 days of customer inactivity",
       active: true,
       position: 1,
       conditions: {
@@ -83,12 +96,17 @@ export const mockAutomations = {
         { field: "status", value: "solved" },
         { field: "notification_user", value: ["requester_id", "Ticket auto-solved due to inactivity"] }
       ],
+      usage_1h: 5,
+      usage_24h: 88,
+      usage_7d: 615,
+      usage_30d: 2640,
       created_at: "2024-01-20T12:00:00Z",
       updated_at: "2024-05-18T10:10:00Z"
     },
     {
       id: 36002234502,
       title: "Escalate Unassigned Urgent Tickets After 2 Hours",
+      description: "Escalate unassigned urgent tickets directly to tier 2 team",
       active: true,
       position: 2,
       conditions: {
@@ -104,6 +122,10 @@ export const mockAutomations = {
         { field: "group_id", value: 36000100002 },
         { field: "notification_group", value: [36000100002, "Urgent unassigned ticket requires attention!"] }
       ],
+      usage_1h: 1,
+      usage_24h: 12,
+      usage_7d: 94,
+      usage_30d: 410,
       created_at: "2024-02-14T15:00:00Z",
       updated_at: "2024-06-11T13:20:00Z"
     }
@@ -119,6 +141,8 @@ export const mockViews = {
       default: true,
       position: 1,
       description: "Tickets assigned to current agent that need attention",
+      sla_id: 36001100001,
+      watchable: true,
       conditions: {
         all: [
           { field: "status", operator: "less_than", value: "solved" },
@@ -149,6 +173,8 @@ export const mockViews = {
       default: false,
       position: 2,
       description: "High priority tickets waiting for pickup",
+      sla_id: null,
+      watchable: false,
       conditions: {
         all: [
           { field: "status", operator: "is", value: "new" },
@@ -186,6 +212,7 @@ export const mockOrganizations = {
       group_id: 36000100002,
       shared_comments: true,
       shared_tickets: true,
+      ticket_restriction: "organization",
       tags: ["enterprise", "sla_platinum", "us_east"],
       organization_fields: { contract_tier: "platinum", renewal_month: "October" },
       created_at: "2023-05-10T10:00:00Z",
@@ -201,6 +228,7 @@ export const mockOrganizations = {
       group_id: 36000100001,
       shared_comments: true,
       shared_tickets: false,
+      ticket_restriction: "restricted",
       tags: ["vip_customer", "innovations"],
       organization_fields: { contract_tier: "gold" },
       created_at: "2023-07-22T08:15:00Z",
@@ -220,8 +248,12 @@ export const mockAgents = {
       custom_role_id: null,
       active: true,
       suspended: false,
+      two_factor_auth_enabled: true,
       restricted_agent: false,
+      ticket_restriction: "organization",
+      only_private_comments: false,
       alias: "Alice Support Lead",
+      external_id: "EXT-USR-101",
       details: "Lead Support Operations",
       notes: "Shift: EMEA morning",
       phone: "+1-555-0192",
@@ -247,8 +279,12 @@ export const mockAgents = {
       custom_role_id: 36000700001,
       active: true,
       suspended: false,
+      two_factor_auth_enabled: false,
       restricted_agent: false,
+      ticket_restriction: "groups",
+      only_private_comments: false,
       alias: "Bob Tech Support",
+      external_id: "EXT-USR-102",
       details: "Senior Escalation Engineer",
       notes: "Hardware specialist",
       phone: "+1-555-0193",
@@ -321,6 +357,10 @@ export const mockMacros = {
         { field: "current_tags", value: ["awaiting_logs"] }
       ],
       restriction: { type: "Everyone" },
+      usage_1h: 8,
+      usage_24h: 96,
+      usage_7d: 670,
+      usage_30d: 2890,
       created_at: "2023-06-10T10:00:00Z",
       updated_at: "2024-08-10T12:00:00Z"
     },
@@ -337,6 +377,10 @@ export const mockMacros = {
         { field: "comment_value", value: "Tier 1 checklist verified. Escalating for deep-dive analysis." }
       ],
       restriction: { type: "Group", id: 36000100001 },
+      usage_1h: 3,
+      usage_24h: 42,
+      usage_7d: 295,
+      usage_30d: 1180,
       created_at: "2023-07-01T14:30:00Z",
       updated_at: "2024-07-25T11:00:00Z"
     }
@@ -349,7 +393,10 @@ export const mockTicketFields = {
       id: 36000200001,
       title: "Issue Category",
       type: "tagger",
+      key: "issue_category",
       active: true,
+      removable: true,
+      sub_type_id: 0,
       description: "Classification of customer problem",
       agent_description: "Select closest root domain",
       title_in_portal: "What is this issue related to?",
@@ -378,7 +425,10 @@ export const mockTicketFields = {
       id: 36000200002,
       title: "Customer System OS",
       type: "text",
+      key: "customer_os",
       active: true,
+      removable: true,
+      sub_type_id: null,
       description: "Client operating system and build number",
       agent_description: "E.g. Windows 11 23H2 or macOS Sonoma",
       title_in_portal: "Operating System",
@@ -397,6 +447,38 @@ export const mockTicketFields = {
       creator_app_name: "Admin Center",
       created_at: "2023-02-15T09:00:00Z",
       updated_at: "2024-03-20T11:30:00Z"
+    },
+    {
+      id: 36000200003,
+      title: "Priority",
+      type: "priority",
+      key: "priority",
+      active: true,
+      removable: false,
+      sub_type_id: 0,
+      description: "Ticket urgency level",
+      agent_description: "System priority scale",
+      title_in_portal: "Priority",
+      visible_in_portal: true,
+      editable_in_portal: false,
+      required: false,
+      required_in_portal: false,
+      agent_can_edit: true,
+      collapsed_for_agents: false,
+      position: 3,
+      tag: null,
+      regexp_for_validation: null,
+      system_field_options: [
+        { name: "Low", value: "low" },
+        { name: "Normal", value: "normal", default: true },
+        { name: "High", value: "high" },
+        { name: "Urgent", value: "urgent" }
+      ],
+      relationship_target_type: null,
+      relationship_filter: null,
+      creator_app_name: "Zendesk Support",
+      created_at: "2022-01-01T00:00:00Z",
+      updated_at: "2024-01-01T00:00:00Z"
     }
   ]
 };
@@ -419,6 +501,10 @@ export const mockSchedules = {
         // Friday: 09:00 (7200 + 540 = 7740) to 17:00 (7200 + 1020 = 8220)
         { start_time: 7740, end_time: 8220 }
       ],
+      holidays: [
+        { id: 1, name: "Christmas Day", start_date: "2025-12-25", end_date: "2025-12-25" },
+        { id: 2, name: "New Year's Day", start_date: "2026-01-01", end_date: "2026-01-01" }
+      ],
       created_at: "2023-01-01T00:00:00Z",
       updated_at: "2024-01-15T00:00:00Z"
     }
@@ -438,6 +524,7 @@ export const mockSupportAddresses = {
       cname_status: "verified",
       dns_results: "pass",
       domain_verification_status: "verified",
+      domain_verification_code: "zd_verify_a1b2c3d4e5f6",
       created_at: "2022-11-01T12:00:00Z",
       updated_at: "2024-03-01T10:00:00Z"
     },
@@ -452,6 +539,7 @@ export const mockSupportAddresses = {
       cname_status: "verified",
       dns_results: "pass",
       domain_verification_status: "verified",
+      domain_verification_code: "zd_verify_x9y8z7w6v5u4",
       created_at: "2023-04-10T14:00:00Z",
       updated_at: "2024-02-12T09:30:00Z"
     }
@@ -549,7 +637,9 @@ export const mockGroupSLAs = {
         all: [
           { field: "group_id", operator: "is", value: 36000100002 }
         ],
-        any: []
+        any: [
+          { field: "type", operator: "is", value: "incident" }
+        ]
       },
       policy_metrics: [
         { priority: "urgent", metric: "group_ownership_time", target: 30, business_hours: true },
@@ -580,6 +670,12 @@ export const mockCustomRoles = {
       name: "Tier 2 Specialist",
       description: "Escalation handling team member",
       role_type: 0
+    },
+    {
+      id: 36000700001,
+      name: "Senior Support Engineer Tier 2",
+      description: "Senior technical escalation engineer",
+      role_type: 0
     }
   ]
 };
@@ -596,6 +692,69 @@ export const mockTriggerCategories = {
       name: "Routing & Assignment",
       position: 2
     }
+  ]
+};
+
+export const mockOrganizationFields = {
+  organization_fields: [
+    {
+      id: 36000910001,
+      key: "contract_tier",
+      title: "Contract Tier",
+      type: "dropdown",
+      active: true,
+      custom_field_options: [
+        { id: 1, name: "Platinum", value: "platinum" },
+        { id: 2, name: "Gold", value: "gold" },
+        { id: 3, name: "Silver", value: "silver" }
+      ]
+    },
+    {
+      id: 36000910002,
+      key: "renewal_month",
+      title: "Renewal Month",
+      type: "text",
+      active: true
+    },
+    {
+      id: 36000910003,
+      key: "sla_plan",
+      title: "SLA Plan",
+      type: "dropdown",
+      active: true,
+      custom_field_options: [
+        { id: 10, name: "24/7 Critical", value: "critical" },
+        { id: 11, name: "Standard", value: "standard" }
+      ]
+    }
+  ]
+};
+
+export const mockUserFields = {
+  user_fields: [
+    {
+      id: 36000920001,
+      key: "department",
+      title: "Department",
+      type: "text",
+      active: true
+    },
+    {
+      id: 36000920002,
+      key: "employee_id",
+      title: "Employee ID",
+      type: "text",
+      active: true
+    }
+  ]
+};
+
+export const mockGroupMemberships = {
+  group_memberships: [
+    { id: 101, user_id: 36000400001, group_id: 36000100001, default: true },
+    { id: 102, user_id: 36000400001, group_id: 36000100002, default: false },
+    { id: 103, user_id: 36000400002, group_id: 36000100002, default: true },
+    { id: 104, user_id: 36000400002, group_id: 36000100003, default: false },
   ]
 };
 
