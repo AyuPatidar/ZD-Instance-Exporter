@@ -1,9 +1,9 @@
 import { describe, test, expect } from 'vitest';
 import { formatConditions, formatCondition } from '../src/utils/formatters/conditionFormatter';
 import { formatAction, formatActionList } from '../src/utils/formatters/actionFormatter';
-import { formatScheduleIntervals, formatInterval } from '../src/utils/formatters/scheduleFormatter';
+import { formatScheduleIntervals, formatInterval, formatScheduleHolidays } from '../src/utils/formatters/scheduleFormatter';
 import { formatSLAMetric, formatSLAMetricsList } from '../src/utils/formatters/slaFormatter';
-import { formatCustomFieldOptions } from '../src/utils/formatters/customFieldFormatter';
+import { formatCustomFieldOptions, formatRecordCustomFields } from '../src/utils/formatters/customFieldFormatter';
 import { formatDateUTC } from '../src/utils/formatters/dateFormatter';
 import { createEmptyLookups } from '../src/types/lookups';
 
@@ -233,6 +233,18 @@ describe('Schedule Formatter', () => {
     expect(schedule.Wednesday).toBe('Closed');
     expect(schedule.Sunday).toBe('Closed');
   });
+
+  test('formats schedule holidays with date ranges', () => {
+    const holidays = [
+      { id: 1, name: 'Christmas Day', start_date: '2025-12-25', end_date: '2025-12-25' },
+      { id: 2, name: 'Winter Break', start_date: '2025-12-26', end_date: '2025-12-31' },
+    ];
+    const formatted = formatScheduleHolidays(holidays);
+    expect(formatted).toBe('1. Christmas Day (2025-12-25)\n2. Winter Break (2025-12-26 to 2025-12-31)');
+
+    expect(formatScheduleHolidays([])).toBe('None');
+    expect(formatScheduleHolidays(undefined)).toBe('None');
+  });
 });
 
 describe('SLA Metrics Formatter', () => {
@@ -279,6 +291,68 @@ describe('Custom Field Options Formatter', () => {
     expect(formatted).toBe(
       '1. Alfa Romeo → alfa_romeo\n2. Aston Martin → aston_martin [Default]\n3. BMW → bmw'
     );
+  });
+
+  test('formats record custom fields showing all defined fields including unset ones', () => {
+    const definitions = [
+      {
+        id: 101,
+        key: 'contract_tier',
+        title: 'Contract Tier',
+        type: 'dropdown',
+        options: new Map([
+          ['platinum', 'Platinum VIP'],
+          ['gold', 'Gold Tier'],
+        ]),
+      },
+      {
+        id: 102,
+        key: 'renewal_month',
+        title: 'Renewal Month',
+        type: 'text',
+      },
+      {
+        id: 103,
+        key: 'is_strategic',
+        title: 'Strategic Partner',
+        type: 'checkbox',
+      },
+      {
+        id: 104,
+        key: 'notes',
+        title: 'Internal Notes',
+        type: 'textarea',
+      },
+    ];
+    const defMap = new Map(definitions.map(d => [d.key, d]));
+
+    // Record has only contract_tier and is_strategic; renewal_month and notes are null/unset
+    const recordFields = {
+      contract_tier: 'platinum',
+      is_strategic: true,
+      renewal_month: null,
+      notes: '',
+      extra_ad_hoc_field: 'Special Handling',
+    };
+
+    const formatted = formatRecordCustomFields(recordFields, null, definitions, defMap);
+
+    // Verifies all 4 defined fields + the 1 extra field are shown in the single cell
+    expect(formatted).toContain('1. Contract Tier: Platinum VIP');
+    expect(formatted).toContain('2. Renewal Month: -');
+    expect(formatted).toContain('3. Strategic Partner: Yes');
+    expect(formatted).toContain('4. Internal Notes: -');
+    expect(formatted).toContain('5. extra_ad_hoc_field: Special Handling');
+  });
+
+  test('formats record custom fields when no definitions are cached', () => {
+    const recordFields = {
+      department: 'Finance',
+      location: null,
+    };
+    const formatted = formatRecordCustomFields(recordFields, null, [], new Map());
+    expect(formatted).toContain('1. department: Finance');
+    expect(formatted).toContain('2. location: -');
   });
 });
 

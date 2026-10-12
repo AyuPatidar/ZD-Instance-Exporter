@@ -1,4 +1,4 @@
-import { ZendeskLookups, createEmptyLookups, TicketFieldLookup } from '../../types/lookups';
+import { ZendeskLookups, createEmptyLookups, TicketFieldLookup, CustomFieldDefinitionLookup } from '../../types/lookups';
 import { fetchAllPages } from './pagination';
 import { zendeskRequest } from './zendeskRequest';
 import { zafClient } from '../zaf/zafClient';
@@ -45,11 +45,72 @@ export async function getZendeskLookups(forceRefresh = false): Promise<ZendeskLo
       console.warn('[Lookups] Failed to fetch groups for cross-referencing:', err);
     }
 
+    // 1b. Fetch Group Memberships (for accurate agent counts per group and agent group associations)
+    try {
+      const memberships = await fetchAllPages<{ id: number; group_id: number; user_id: number }>(
+        '/api/v2/group_memberships.json?page[size]=100',
+        'group_memberships'
+      );
+      const groupUserSets = new Map<number, Set<number>>();
+      for (const m of memberships) {
+        if (m.group_id && m.user_id) {
+          if (!groupUserSets.has(m.group_id)) {
+            groupUserSets.set(m.group_id, new Set());
+          }
+          groupUserSets.get(m.group_id)!.add(m.user_id);
+
+          if (!lookups.userGroupIds.has(m.user_id)) {
+            lookups.userGroupIds.set(m.user_id, []);
+          }
+          const userGids = lookups.userGroupIds.get(m.user_id)!;
+          if (!userGids.includes(m.group_id)) {
+            userGids.push(m.group_id);
+          }
+        }
+      }
+      for (const [gid, set] of groupUserSets.entries()) {
+        lookups.groupAgentCounts.set(gid, set.size);
+      }
+    } catch (err) {
+      console.warn('[Lookups] Failed to fetch group memberships, will infer from agent records if available:', err);
+    }
+
     // 2. Fetch Agents (role=agent & role=admin)
     try {
       const agents = await fetchAllPages<ZendeskAgentRaw>('/api/v2/users.json?role[]=agent&role[]=admin&page[size]=100', 'users');
       for (const agent of agents) {
         lookups.users.set(agent.id, agent.name || agent.email);
+      }
+
+      // If group memberships were not available, infer group agent counts from agent records
+      if (lookups.groupAgentCounts.size === 0) {
+        const groupUserSets = new Map<number, Set<number>>();
+        for (const agent of agents) {
+          const gids: number[] = [];
+          if (Array.isArray(agent.group_ids)) {
+            gids.push(...agent.group_ids);
+          }
+          if (agent.default_group_id && !gids.includes(agent.default_group_id)) {
+            gids.push(agent.default_group_id);
+          }
+          for (const gid of gids) {
+            if (!groupUserSets.has(gid)) {
+              groupUserSets.set(gid, new Set());
+            }
+            groupUserSets.get(gid)!.add(agent.id);
+
+            if (!lookups.userGroupIds.has(agent.id)) {
+              lookups.userGroupIds.set(agent.id, []);
+            }
+            const userGids = lookups.userGroupIds.get(agent.id)!;
+            if (!userGids.includes(gid)) {
+              userGids.push(gid);
+            }
+          }
+        }
+        for (const [gid, set] of groupUserSets.entries()) {
+          lookups.groupAgentCounts.set(gid, set.size);
+        }
       }
     } catch (err) {
       console.warn('[Lookups] Failed to fetch agents for cross-referencing:', err);
@@ -196,6 +257,110 @@ export async function getZendeskLookups(forceRefresh = false): Promise<ZendeskLo
         }
       } catch (innerErr) {
         console.warn('[Lookups] Trigger categories not available or restricted on this plan:', innerErr);
+      }
+    }
+
+    // 10. Fetch Organization Fields
+    try {
+      const orgFields = await fetchAllPages<any>('/api/v2/organization_fields.json?page[size]=100', 'organization_fields');
+      for (const field of orgFields) {
+        if (field && (field.key || field.id)) {
+          const optionMap = new Map<string, string>();
+          if (Array.isArray(field.custom_field_options)) {
+            for (const opt of field.custom_field_options) {
+              optionMap.set(opt.value, opt.name);
+            }
+          }
+          const item: CustomFieldDefinitionLookup = {
+            id: field.id,
+            key: field.key || String(field.id),
+            title: field.title || field.raw_title || field.key || `Field ${field.id}`,
+            type: field.type || 'text',
+            options: optionMap,
+          };
+          lookups.organizationFields.push(item);
+          lookups.organizationFieldsMap.set(item.key, item);
+          lookups.organizationFieldsMap.set(String(item.id), item);
+        }
+      }
+    } catch (err) {
+      try {
+        const directOrgFields = await zendeskRequest<any>({ url: '/api/v2/organization_fields.json', type: 'GET' });
+        const list = directOrgFields?.organization_fields || [];
+        for (const field of list) {
+          if (field && (field.key || field.id)) {
+            const optionMap = new Map<string, string>();
+            if (Array.isArray(field.custom_field_options)) {
+              for (const opt of field.custom_field_options) {
+                optionMap.set(opt.value, opt.name);
+              }
+            }
+            const item: CustomFieldDefinitionLookup = {
+              id: field.id,
+              key: field.key || String(field.id),
+              title: field.title || field.raw_title || field.key || `Field ${field.id}`,
+              type: field.type || 'text',
+              options: optionMap,
+            };
+            lookups.organizationFields.push(item);
+            lookups.organizationFieldsMap.set(item.key, item);
+            lookups.organizationFieldsMap.set(String(item.id), item);
+          }
+        }
+      } catch (innerErr) {
+        console.warn('[Lookups] Failed to fetch organization fields:', innerErr);
+      }
+    }
+
+    // 11. Fetch User Fields
+    try {
+      const uFields = await fetchAllPages<any>('/api/v2/user_fields.json?page[size]=100', 'user_fields');
+      for (const field of uFields) {
+        if (field && (field.key || field.id)) {
+          const optionMap = new Map<string, string>();
+          if (Array.isArray(field.custom_field_options)) {
+            for (const opt of field.custom_field_options) {
+              optionMap.set(opt.value, opt.name);
+            }
+          }
+          const item: CustomFieldDefinitionLookup = {
+            id: field.id,
+            key: field.key || String(field.id),
+            title: field.title || field.raw_title || field.key || `Field ${field.id}`,
+            type: field.type || 'text',
+            options: optionMap,
+          };
+          lookups.userFields.push(item);
+          lookups.userFieldsMap.set(item.key, item);
+          lookups.userFieldsMap.set(String(item.id), item);
+        }
+      }
+    } catch (err) {
+      try {
+        const directUFields = await zendeskRequest<any>({ url: '/api/v2/user_fields.json', type: 'GET' });
+        const list = directUFields?.user_fields || [];
+        for (const field of list) {
+          if (field && (field.key || field.id)) {
+            const optionMap = new Map<string, string>();
+            if (Array.isArray(field.custom_field_options)) {
+              for (const opt of field.custom_field_options) {
+                optionMap.set(opt.value, opt.name);
+              }
+            }
+            const item: CustomFieldDefinitionLookup = {
+              id: field.id,
+              key: field.key || String(field.id),
+              title: field.title || field.raw_title || field.key || `Field ${field.id}`,
+              type: field.type || 'text',
+              options: optionMap,
+            };
+            lookups.userFields.push(item);
+            lookups.userFieldsMap.set(item.key, item);
+            lookups.userFieldsMap.set(String(item.id), item);
+          }
+        }
+      } catch (innerErr) {
+        console.warn('[Lookups] Failed to fetch user fields:', innerErr);
       }
     }
 

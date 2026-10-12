@@ -69,3 +69,24 @@ export function formatScheduleIntervals(intervals?: ZendeskWorkWeekInterval[]): 
     Sunday: formatDay(days[0]),
   };
 }
+
+export function formatScheduleHolidays(
+  holidays?: Array<{ id?: number; name?: string; start_date?: string; end_date?: string }>
+): string {
+  if (!holidays || !Array.isArray(holidays) || holidays.length === 0) {
+    return 'None';
+  }
+
+  return holidays
+    .map((h, idx) => {
+      const dates =
+        h.start_date && h.end_date
+          ? h.start_date === h.end_date
+            ? h.start_date
+            : `${h.start_date} to ${h.end_date}`
+          : h.start_date || h.end_date || '';
+      const dateSuffix = dates ? ` (${dates})` : '';
+      return `${idx + 1}. ${h.name || 'Holiday'}${dateSuffix}`;
+    })
+    .join('\n');
+}

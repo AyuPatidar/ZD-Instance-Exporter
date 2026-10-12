@@ -181,6 +181,20 @@ export function formatField(field: string, lookups?: ZendeskLookups): string {
     return `Custom Field (${fieldId})`;
   }
 
+  // Check for org/user custom field by key (e.g. custom_fields.key or organization.custom_fields.key)
+  const matchKey = field.match(/(?:organization\.|requester\.|user\.)?custom_fields?[_.](\w+)/i);
+  if (matchKey && lookups) {
+    const key = matchKey[1];
+    const orgField = lookups.organizationFieldsMap?.get(key) || lookups.organizationFieldsMap?.get(key.toLowerCase());
+    if (orgField) {
+      return `Custom Org: ${orgField.title} (${key})`;
+    }
+    const userField = lookups.userFieldsMap?.get(key) || lookups.userFieldsMap?.get(key.toLowerCase());
+    if (userField) {
+      return `Custom User: ${userField.title} (${key})`;
+    }
+  }
+
   return field.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 }
 
@@ -322,6 +336,19 @@ export function formatFieldValue(
       if (customField && customField.options && customField.options.has(String(value))) {
         const optName = customField.options.get(String(value));
         return `${optName} (${value})`;
+      }
+    }
+
+    const matchKey = field.match(/(?:organization\.|requester\.|user\.)?custom_fields?[_.](\w+)/i);
+    if (matchKey) {
+      const key = matchKey[1];
+      const orgField = lookups.organizationFieldsMap?.get(key) || lookups.organizationFieldsMap?.get(key.toLowerCase());
+      if (orgField?.options?.has(String(value))) {
+        return `${orgField.options.get(String(value))} (${value})`;
+      }
+      const userField = lookups.userFieldsMap?.get(key) || lookups.userFieldsMap?.get(key.toLowerCase());
+      if (userField?.options?.has(String(value))) {
+        return `${userField.options.get(String(value))} (${value})`;
       }
     }
   } else {

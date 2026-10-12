@@ -112,3 +112,5 @@ export function exportMultipleTabsToXLSX(
   const filename = generateExportFilename(subdomain);
   XLSX.writeFile(wb, filename);
 }
+
+export * from './auditReportBuilder';
